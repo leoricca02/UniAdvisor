@@ -1,0 +1,1 @@
+package com.riccaturrini.uniadvisor.ui.screen
