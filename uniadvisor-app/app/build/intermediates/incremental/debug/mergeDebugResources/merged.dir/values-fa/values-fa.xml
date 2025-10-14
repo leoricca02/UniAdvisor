@@ -2,7 +2,6 @@
 <resources xmlns:ns1="urn:oasis:names:tc:xliff:document:1.2">
     <string msgid="8397015543330865059" name="android.credentials.TYPE_PASSWORD_CREDENTIAL">"گذرواژه"</string>
     <string msgid="3929015085059320822" name="androidx.credentials.TYPE_PUBLIC_KEY_CREDENTIAL">"گذرکلید"</string>
-    <string msgid="389117264260014992" name="autofill">"تکمیل خودکار"</string>
     <string msgid="881409763997275156" name="call_notification_answer_action">"پاسخ دادن"</string>
     <string msgid="8793775615905189152" name="call_notification_answer_video_action">"ویدیو"</string>
     <string msgid="3229508546291798546" name="call_notification_decline_action">"رد کردن"</string>
@@ -38,7 +37,7 @@
     <string msgid="3413186855122069269" name="fallback_menu_item_open_in_browser">"بازکردن در مرورگر"</string>
     <string msgid="7145444925855055364" name="fallback_menu_item_share_link">"هم‌رسانی پیوند"</string>
     <string msgid="6827826412747255547" name="in_progress">"درحال انجام"</string>
-    <string msgid="7933458017204019916" name="indeterminate">"ناقص علامت زده‌شده"</string>
+    <string msgid="7933458017204019916" name="indeterminate">"برخی موارد علامت‌گذاری شده است"</string>
     <string msgid="2988463736136100848" name="m3c_bottom_sheet_collapse_description">"جمع کردن برگ زیرین"</string>
     <string msgid="1555567894577437024" name="m3c_bottom_sheet_dismiss_description">"بستن برگ زیرین"</string>
     <string msgid="8403354765404029791" name="m3c_bottom_sheet_drag_handle_description">"دستگیره کشاندن"</string>
@@ -78,7 +77,6 @@
     <string msgid="7617233117134790350" name="m3c_dialog">"کادر گفتگو"</string>
     <string msgid="3177828188723359358" name="m3c_dropdown_menu_collapsed">"جمع شد"</string>
     <string msgid="2360841780724299882" name="m3c_dropdown_menu_expanded">"ازهم باز شد"</string>
-    <string msgid="8687821690726149911" name="m3c_dropdown_menu_toggle">"جمع کردن/ ازهم باز کردن منوِ کرکره‌ای"</string>
     <string msgid="6152806324422087846" name="m3c_search_bar_search">"جستجو"</string>
     <string msgid="6152755701819882931" name="m3c_snackbar_dismiss">"بستن"</string>
     <string msgid="7655536806087401899" name="m3c_suggestions_available">"پیشنهادهای زیر"</string>
@@ -98,13 +96,11 @@
     <string msgid="5460405025248574620" name="m3c_tooltip_pane_description">"نکته‌ابزار"</string>
     <string msgid="542007171693138492" name="navigation_menu">"منوی پیمایش"</string>
     <string msgid="6610465462668679431" name="not_selected">"انتخاب‌نشده"</string>
+    <string msgid="875452955155264703" name="off">"خاموش"</string>
+    <string msgid="8655164131929253426" name="on">"روشن"</string>
     <string msgid="5941395253238309765" name="range_end">"پایان محدوده"</string>
     <string msgid="7097486360902471446" name="range_start">"شروع محدوده"</string>
     <string msgid="6043586758067023" name="selected">"انتخاب شد"</string>
-    <string msgid="2792228137354697160" name="snackbar_pane_title">"هشدار"</string>
-    <string msgid="4139871816613051306" name="state_empty">"خالی"</string>
-    <string msgid="5834637030682409883" name="state_off">"خاموش"</string>
-    <string msgid="1490883874751719580" name="state_on">"روشن"</string>
     <string msgid="6277540029070332960" name="status_bar_notification_info_overflow">"999+"</string>
     <string msgid="2561197295334830845" name="switch_role">"کلید"</string>
     <string msgid="1672349317127674378" name="tab">"برگه"</string>
