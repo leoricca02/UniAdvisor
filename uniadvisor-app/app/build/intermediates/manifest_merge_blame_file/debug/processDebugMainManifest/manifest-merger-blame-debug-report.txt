@@ -291,47 +291,47 @@
 159-->[com.google.android.gms:play-services-base:18.3.0] C:\Users\Leonardo\.gradle\caches\8.13\transforms\8012e81440f76dacb83fbccb09cbcbd6\transformed\play-services-base-18.3.0\AndroidManifest.xml:22:19-43
 160            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 160-->[com.google.android.gms:play-services-base:18.3.0] C:\Users\Leonardo\.gradle\caches\8.13\transforms\8012e81440f76dacb83fbccb09cbcbd6\transformed\play-services-base-18.3.0\AndroidManifest.xml:21:19-78
-161        <activity
-161-->[androidx.compose.ui:ui-tooling-android:1.6.7] C:\Users\Leonardo\.gradle\caches\8.13\transforms\0c3901c2235079e1f1428dba8a36dcfd\transformed\ui-tooling-release\AndroidManifest.xml:23:9-25:39
-162            android:name="androidx.compose.ui.tooling.PreviewActivity"
-162-->[androidx.compose.ui:ui-tooling-android:1.6.7] C:\Users\Leonardo\.gradle\caches\8.13\transforms\0c3901c2235079e1f1428dba8a36dcfd\transformed\ui-tooling-release\AndroidManifest.xml:24:13-71
-163            android:exported="true" />
-163-->[androidx.compose.ui:ui-tooling-android:1.6.7] C:\Users\Leonardo\.gradle\caches\8.13\transforms\0c3901c2235079e1f1428dba8a36dcfd\transformed\ui-tooling-release\AndroidManifest.xml:25:13-36
-164
-165        <provider
-165-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Leonardo\.gradle\caches\8.13\transforms\958bcbf45d929e3beb1679491ece4e26\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
-166            android:name="androidx.startup.InitializationProvider"
-166-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Leonardo\.gradle\caches\8.13\transforms\958bcbf45d929e3beb1679491ece4e26\transformed\emoji2-1.3.0\AndroidManifest.xml:25:13-67
-167            android:authorities="com.riccaturrini.uniadvisor.androidx-startup"
-167-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Leonardo\.gradle\caches\8.13\transforms\958bcbf45d929e3beb1679491ece4e26\transformed\emoji2-1.3.0\AndroidManifest.xml:26:13-68
-168            android:exported="false" >
-168-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Leonardo\.gradle\caches\8.13\transforms\958bcbf45d929e3beb1679491ece4e26\transformed\emoji2-1.3.0\AndroidManifest.xml:27:13-37
+161
+162        <provider
+162-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Leonardo\.gradle\caches\8.13\transforms\958bcbf45d929e3beb1679491ece4e26\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
+163            android:name="androidx.startup.InitializationProvider"
+163-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Leonardo\.gradle\caches\8.13\transforms\958bcbf45d929e3beb1679491ece4e26\transformed\emoji2-1.3.0\AndroidManifest.xml:25:13-67
+164            android:authorities="com.riccaturrini.uniadvisor.androidx-startup"
+164-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Leonardo\.gradle\caches\8.13\transforms\958bcbf45d929e3beb1679491ece4e26\transformed\emoji2-1.3.0\AndroidManifest.xml:26:13-68
+165            android:exported="false" >
+165-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Leonardo\.gradle\caches\8.13\transforms\958bcbf45d929e3beb1679491ece4e26\transformed\emoji2-1.3.0\AndroidManifest.xml:27:13-37
+166            <meta-data
+166-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Leonardo\.gradle\caches\8.13\transforms\958bcbf45d929e3beb1679491ece4e26\transformed\emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
+167                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+167-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Leonardo\.gradle\caches\8.13\transforms\958bcbf45d929e3beb1679491ece4e26\transformed\emoji2-1.3.0\AndroidManifest.xml:30:17-75
+168                android:value="androidx.startup" />
+168-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Leonardo\.gradle\caches\8.13\transforms\958bcbf45d929e3beb1679491ece4e26\transformed\emoji2-1.3.0\AndroidManifest.xml:31:17-49
 169            <meta-data
-169-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Leonardo\.gradle\caches\8.13\transforms\958bcbf45d929e3beb1679491ece4e26\transformed\emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
-170                android:name="androidx.emoji2.text.EmojiCompatInitializer"
-170-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Leonardo\.gradle\caches\8.13\transforms\958bcbf45d929e3beb1679491ece4e26\transformed\emoji2-1.3.0\AndroidManifest.xml:30:17-75
+169-->[androidx.lifecycle:lifecycle-process:2.8.3] C:\Users\Leonardo\.gradle\caches\8.13\transforms\96aa449fb2c4c759a45ab29676ea1433\transformed\lifecycle-process-2.8.3\AndroidManifest.xml:29:13-31:52
+170                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+170-->[androidx.lifecycle:lifecycle-process:2.8.3] C:\Users\Leonardo\.gradle\caches\8.13\transforms\96aa449fb2c4c759a45ab29676ea1433\transformed\lifecycle-process-2.8.3\AndroidManifest.xml:30:17-78
 171                android:value="androidx.startup" />
-171-->[androidx.emoji2:emoji2:1.3.0] C:\Users\Leonardo\.gradle\caches\8.13\transforms\958bcbf45d929e3beb1679491ece4e26\transformed\emoji2-1.3.0\AndroidManifest.xml:31:17-49
+171-->[androidx.lifecycle:lifecycle-process:2.8.3] C:\Users\Leonardo\.gradle\caches\8.13\transforms\96aa449fb2c4c759a45ab29676ea1433\transformed\lifecycle-process-2.8.3\AndroidManifest.xml:31:17-49
 172            <meta-data
-172-->[androidx.lifecycle:lifecycle-process:2.8.3] C:\Users\Leonardo\.gradle\caches\8.13\transforms\96aa449fb2c4c759a45ab29676ea1433\transformed\lifecycle-process-2.8.3\AndroidManifest.xml:29:13-31:52
-173                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
-173-->[androidx.lifecycle:lifecycle-process:2.8.3] C:\Users\Leonardo\.gradle\caches\8.13\transforms\96aa449fb2c4c759a45ab29676ea1433\transformed\lifecycle-process-2.8.3\AndroidManifest.xml:30:17-78
+172-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Leonardo\.gradle\caches\8.13\transforms\b5486066e3d62a44dd37e0f20e153fe3\transformed\profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
+173                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+173-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Leonardo\.gradle\caches\8.13\transforms\b5486066e3d62a44dd37e0f20e153fe3\transformed\profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
 174                android:value="androidx.startup" />
-174-->[androidx.lifecycle:lifecycle-process:2.8.3] C:\Users\Leonardo\.gradle\caches\8.13\transforms\96aa449fb2c4c759a45ab29676ea1433\transformed\lifecycle-process-2.8.3\AndroidManifest.xml:31:17-49
-175            <meta-data
-175-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Leonardo\.gradle\caches\8.13\transforms\b5486066e3d62a44dd37e0f20e153fe3\transformed\profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
-176                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
-176-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Leonardo\.gradle\caches\8.13\transforms\b5486066e3d62a44dd37e0f20e153fe3\transformed\profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
-177                android:value="androidx.startup" />
-177-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Leonardo\.gradle\caches\8.13\transforms\b5486066e3d62a44dd37e0f20e153fe3\transformed\profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
-178        </provider>
-179
+174-->[androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\Leonardo\.gradle\caches\8.13\transforms\b5486066e3d62a44dd37e0f20e153fe3\transformed\profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
+175        </provider>
+176
+177        <activity
+177-->[androidx.compose.ui:ui-test-manifest:1.6.7] C:\Users\Leonardo\.gradle\caches\8.13\transforms\d9acf61ce470c74969854512f7ea86b3\transformed\ui-test-manifest-1.6.7\AndroidManifest.xml:23:9-25:39
+178            android:name="androidx.activity.ComponentActivity"
+178-->[androidx.compose.ui:ui-test-manifest:1.6.7] C:\Users\Leonardo\.gradle\caches\8.13\transforms\d9acf61ce470c74969854512f7ea86b3\transformed\ui-test-manifest-1.6.7\AndroidManifest.xml:24:13-63
+179            android:exported="true" />
+179-->[androidx.compose.ui:ui-test-manifest:1.6.7] C:\Users\Leonardo\.gradle\caches\8.13\transforms\d9acf61ce470c74969854512f7ea86b3\transformed\ui-test-manifest-1.6.7\AndroidManifest.xml:25:13-36
 180        <activity
-180-->[androidx.compose.ui:ui-test-manifest:1.6.7] C:\Users\Leonardo\.gradle\caches\8.13\transforms\d9acf61ce470c74969854512f7ea86b3\transformed\ui-test-manifest-1.6.7\AndroidManifest.xml:23:9-25:39
-181            android:name="androidx.activity.ComponentActivity"
-181-->[androidx.compose.ui:ui-test-manifest:1.6.7] C:\Users\Leonardo\.gradle\caches\8.13\transforms\d9acf61ce470c74969854512f7ea86b3\transformed\ui-test-manifest-1.6.7\AndroidManifest.xml:24:13-63
+180-->[androidx.compose.ui:ui-tooling-android:1.6.7] C:\Users\Leonardo\.gradle\caches\8.13\transforms\0c3901c2235079e1f1428dba8a36dcfd\transformed\ui-tooling-release\AndroidManifest.xml:23:9-25:39
+181            android:name="androidx.compose.ui.tooling.PreviewActivity"
+181-->[androidx.compose.ui:ui-tooling-android:1.6.7] C:\Users\Leonardo\.gradle\caches\8.13\transforms\0c3901c2235079e1f1428dba8a36dcfd\transformed\ui-tooling-release\AndroidManifest.xml:24:13-71
 182            android:exported="true" />
-182-->[androidx.compose.ui:ui-test-manifest:1.6.7] C:\Users\Leonardo\.gradle\caches\8.13\transforms\d9acf61ce470c74969854512f7ea86b3\transformed\ui-test-manifest-1.6.7\AndroidManifest.xml:25:13-36
+182-->[androidx.compose.ui:ui-tooling-android:1.6.7] C:\Users\Leonardo\.gradle\caches\8.13\transforms\0c3901c2235079e1f1428dba8a36dcfd\transformed\ui-tooling-release\AndroidManifest.xml:25:13-36
 183
 184        <provider
 184-->[com.google.firebase:firebase-common:21.0.0] C:\Users\Leonardo\.gradle\caches\8.13\transforms\9efaba2077aa469d97269d6ca5582d47\transformed\firebase-common-21.0.0\AndroidManifest.xml:23:9-28:39

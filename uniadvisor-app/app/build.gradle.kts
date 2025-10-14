@@ -51,12 +51,21 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
+
+    // The Compose BOM will manage the versions for all compose libraries
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+
+    // This dependency was likely causing the conflict.
+    // It is now managed by the BOM, so we don't need a separate entry
+    // if it's already included by another library (like navigation).
+    // Let's rely on the BOM to provide the correct version.
+    implementation(libs.androidx.activity.compose)
+
+    // Test dependencies
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -64,7 +73,8 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-    // Firebase (Usa la BoM per gestire le versioni automaticamente)
+
+    // Firebase BOM
     implementation(platform("com.google.firebase:firebase-bom:33.1.0"))
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
@@ -74,12 +84,13 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
 
-    // Navigation Compose (per la navigazione tra schermate)
+    // Navigation Compose
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
-    // Retrofit (per chiamare l'API Python) - Se e quando ti servirà
+    // Retrofit
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
 
+    // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:21.2.0")
 }
