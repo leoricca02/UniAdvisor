@@ -96,7 +96,6 @@ fun LoginScreen(
             else -> {
                 Button(
                     onClick = {
-                        Log.d("UniAdvisorAuth", "PULSANTE LOGIN CLICCATO") // <-- AGGIUNGI QUESTA RIGA
                         authViewModel.signIn(email, password)
                     },
                     modifier = Modifier.fillMaxWidth()

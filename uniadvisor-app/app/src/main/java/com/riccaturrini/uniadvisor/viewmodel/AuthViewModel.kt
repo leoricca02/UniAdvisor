@@ -29,9 +29,6 @@ class AuthViewModel : ViewModel() {
     val uiState: StateFlow<AuthUiState> = _uiState
 
     fun signIn(email: String, password: String) {
-        // --- LOG DI DEBUG ---
-        Log.d("UniAdvisorAuthVM", ">>> Funzione signIn ESEGUITA con email: $email")
-        // --------------------
 
         if (email.isBlank() || password.isBlank()) {
             _uiState.value = AuthUiState.Error("Email e password non possono essere vuoti")
@@ -44,18 +41,12 @@ class AuthViewModel : ViewModel() {
                 auth.signInWithEmailAndPassword(email, password).await()
                 _uiState.value = AuthUiState.Success
             } catch (e: Exception) {
-                // --- LOG DI DEBUG ---
-                Log.e("UniAdvisorAuthVM", ">>> ERRORE in signIn: ${e.javaClass.simpleName} - ${e.message}")
-                // --------------------
                 _uiState.value = AuthUiState.Error(e.message ?: "Errore di login")
             }
         }
     }
 
     fun createUser(email: String, password: String) {
-        // --- LOG DI DEBUG ---
-        Log.d("UniAdvisorAuthVM", ">>> Funzione createUser ESEGUITA con email: $email")
-        // --------------------
 
         if (email.isBlank() || password.isBlank()) {
             _uiState.value = AuthUiState.Error("Email e password non possono essere vuoti")
@@ -68,9 +59,6 @@ class AuthViewModel : ViewModel() {
                 auth.createUserWithEmailAndPassword(email, password).await()
                 _uiState.value = AuthUiState.Success
             } catch (e: Exception) {
-                // --- LOG DI DEBUG ---
-                Log.e("UniAdvisorAuthVM", ">>> ERRORE in createUser: ${e.javaClass.simpleName} - ${e.message}")
-                // --------------------
                 _uiState.value = AuthUiState.Error(e.message ?: "Errore di registrazione")
             }
         }

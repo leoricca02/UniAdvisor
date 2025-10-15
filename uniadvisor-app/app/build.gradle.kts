@@ -58,11 +58,6 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-
-    // This dependency was likely causing the conflict.
-    // It is now managed by the BOM, so we don't need a separate entry
-    // if it's already included by another library (like navigation).
-    // Let's rely on the BOM to provide the correct version.
     implementation(libs.androidx.activity.compose)
 
     // Test dependencies
