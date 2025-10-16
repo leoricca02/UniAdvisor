@@ -1,4 +1,4 @@
-#Thu Oct 16 16:52:08 CEST 2025
+#Thu Oct 16 19:48:00 CEST 2025
 base.0=C\:\\Users\\feder\\Desktop\\Uni\\UniAdvisor\\uniadvisor-app\\app\\build\\intermediates\\dex\\debug\\mergeExtDexDebug\\classes.dex
 base.1=C\:\\Users\\feder\\Desktop\\Uni\\UniAdvisor\\uniadvisor-app\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\0\\classes.dex
 base.2=C\:\\Users\\feder\\Desktop\\Uni\\UniAdvisor\\uniadvisor-app\\app\\build\\intermediates\\dex\\debug\\mergeProjectDexDebug\\10\\classes.dex

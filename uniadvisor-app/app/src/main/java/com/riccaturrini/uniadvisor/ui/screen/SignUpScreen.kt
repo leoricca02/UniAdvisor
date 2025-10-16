@@ -1,10 +1,7 @@
 // File: ui/screen/SignUpScreen.kt
 package com.riccaturrini.uniadvisor.ui.screen
 
-import android.app.Activity
-import android.util.Log
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -12,140 +9,198 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.android.gms.common.api.ApiException
-import com.riccaturrini.uniadvisor.R
 import com.riccaturrini.uniadvisor.data.UserProfileCreate
 import com.riccaturrini.uniadvisor.viewmodel.AuthUiState
 import com.riccaturrini.uniadvisor.viewmodel.AuthViewModel
+import java.util.regex.Pattern
 
 @Composable
 fun SignUpScreen(
     authViewModel: AuthViewModel = viewModel(),
     onSignUpSuccess: () -> Unit,
-    onNavigateToLogin: () -> Unit,
-    onNavigateToCompleteProfile: () -> Unit
+    onNavigateToLogin: () -> Unit,               // aggiunto
+    onNavigateToCompleteProfile: () -> Unit     // aggiunto
 ) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
     var firstName by remember { mutableStateOf("") }
     var lastName by remember { mutableStateOf("") }
-    var birthDate by remember { mutableStateOf("") }
     var city by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+
+    // Dropdown data di nascita
+    val days = (1..31).toList()
+    val months = (1..12).toList()
+    val years = (1900..2025).toList()
+    var selectedDay by remember { mutableStateOf(1) }
+    var selectedMonth by remember { mutableStateOf(1) }
+    var selectedYear by remember { mutableStateOf(2000) }
 
     val authState by authViewModel.uiState.collectAsState()
-    val context = LocalContext.current
 
-    // --- Logica per Google Sign-In (INVARIATA) ---
-    val googleSignInOptions = remember {
-        GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(context.getString(R.string.your_web_client_id))
-            .requestEmail()
-            .build()
-    }
-    val googleSignInClient = remember { GoogleSignIn.getClient(context, googleSignInOptions) }
+    // Validazioni
+    val isEmailValid = email.isEmpty() || Pattern.compile("[a-zA-Z0-9._-]+@[a-z]+\\.+[a-z]+").matcher(email).matches()
+    val isPasswordLengthValid = password.length >= 6
+    val isPasswordUppercaseValid = password.any { it.isUpperCase() }
+    val isConfirmPasswordValid = confirmPassword.isNotEmpty() && password == confirmPassword
 
-    val googleSignInLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-            try {
-                val account = task.getResult(ApiException::class.java)!!
-                val idToken = account.idToken!!
-                authViewModel.signInWithGoogle(idToken)
-            } catch (e: ApiException) {
-                Log.w("SignUpScreen", "Google sign in failed", e)
-            }
-        }
-    }
-    // --- Fine Logica Google Sign-In ---
 
     LaunchedEffect(authState) {
-        when(authState) {
-            is AuthUiState.Success -> {
-                onSignUpSuccess()
-                authViewModel.resetState()
-            }
-            is AuthUiState.ProfileCreationRequired -> {
-                onNavigateToCompleteProfile()
-                authViewModel.resetState()
-            }
-            else -> { /* Non fare nulla per Idle, Loading o Error */ }
+        if (authState is AuthUiState.Success) {
+            onSignUpSuccess()
+            authViewModel.resetState()
         }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.background)
+                )
+            ),
+        contentAlignment = Alignment.Center
     ) {
-        Text("Registrati", style = MaterialTheme.typography.headlineMedium)
-        Spacer(modifier = Modifier.height(24.dp))
+        Card(
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .padding(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Registrati", style = MaterialTheme.typography.headlineMedium)
+                Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(value = firstName, onValueChange = { firstName = it }, label = { Text("Nome") }, modifier = Modifier.fillMaxWidth())
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = lastName, onValueChange = { lastName = it }, label = { Text("Cognome") }, modifier = Modifier.fillMaxWidth())
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = birthDate, onValueChange = { birthDate = it }, label = { Text("Data di Nascita (YYYY-MM-DD)") }, modifier = Modifier.fillMaxWidth())
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = city, onValueChange = { city = it }, label = { Text("Città") }, modifier = Modifier.fillMaxWidth())
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-        Text(text = "La password deve contenere almeno 6 caratteri.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        when (authState) {
-            is AuthUiState.Loading -> {
-                CircularProgressIndicator()
-            }
-            else -> {
-                Button(
-                    onClick = {
-                        val profileData = UserProfileCreate(
-                            first_name = firstName,
-                            last_name = lastName,
-                            birth_date = birthDate,
-                            city = city
-                        )
-                        authViewModel.createUserAndProfile(email, password, profileData)
-                    },
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") },
                     modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Crea Account")
-                }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = firstName,
+                    onValueChange = { firstName = it },
+                    label = { Text("Nome") },
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedButton(
-                    onClick = { googleSignInLauncher.launch(googleSignInClient.signInIntent) },
+
+                OutlinedTextField(
+                    value = lastName,
+                    onValueChange = { lastName = it },
+                    label = { Text("Cognome") },
                     modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text("Data di nascita", style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("Registrati con Google")
+                    SimpleDropdown(days, selectedDay) { selectedDay = it }
+                    SimpleDropdown(months, selectedMonth) { selectedMonth = it }
+                    SimpleDropdown(years, selectedYear) { selectedYear = it }
                 }
-                TextButton(onClick = onNavigateToLogin) {
-                    Text("Hai già un account? Accedi")
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = city,
+                    onValueChange = { city = it },
+                    label = { Text("Città") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it },
+                    label = { Text("Conferma Password") },
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = confirmPassword.isNotEmpty() && !isConfirmPasswordValid
+                )
+
+                Column(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+                    Text(
+                        "• Minimo 6 caratteri",
+                        color = if(isPasswordLengthValid) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp,
+                        fontStyle = FontStyle.Italic
+                    )
+                    Text(
+                        "• Almeno una maiuscola",
+                        color = if(isPasswordUppercaseValid) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp,
+                        fontStyle = FontStyle.Italic
+                    )
+                    Text(
+                        "• Le password devono coincidere",
+                        color = if(isConfirmPasswordValid) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp,
+                        fontStyle = FontStyle.Italic
+                    )
+
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                if(authState is AuthUiState.Loading) {
+                    CircularProgressIndicator()
+                } else {
+                    Button(
+                        onClick = {
+                            val birthDateStr = String.format("%04d-%02d-%02d", selectedYear, selectedMonth, selectedDay)
+                            val profileData = UserProfileCreate(
+                                first_name = firstName,
+                                last_name = lastName,
+                                birth_date = birthDateStr,
+                                city = city
+                            )
+                            authViewModel.createUserAndProfile(email, password, profileData)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = firstName.isNotEmpty() && lastName.isNotEmpty() && city.isNotEmpty() &&
+                                email.isNotEmpty() && isEmailValid && isPasswordLengthValid &&
+                                isPasswordUppercaseValid && isConfirmPasswordValid
+                    ) {
+                        Text("Crea Account")
+                    }
+                }
+
+                if(authState is AuthUiState.Error) {
+                    Text(
+                        text = (authState as AuthUiState.Error).message,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
                 }
             }
-        }
-
-        if (authState is AuthUiState.Error) {
-            Text(
-                text = (authState as AuthUiState.Error).message,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = 8.dp)
-            )
         }
     }
 }
+
+
+
