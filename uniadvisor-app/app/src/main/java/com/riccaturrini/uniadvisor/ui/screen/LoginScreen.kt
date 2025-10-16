@@ -25,14 +25,15 @@ import com.riccaturrini.uniadvisor.viewmodel.AuthViewModel
 fun LoginScreen(
     authViewModel: AuthViewModel = viewModel(),
     onLoginSuccess: () -> Unit,
-    onNavigateToSignUp: () -> Unit
+    onNavigateToSignUp: () -> Unit,
+    onNavigateToCompleteProfile: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val authState by authViewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // --- Logica per Google Sign-In ---
+    // --- Logica per Google Sign-In (INVARIATA) ---
     val googleSignInOptions = remember {
         GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(context.getString(R.string.your_web_client_id))
@@ -58,9 +59,16 @@ fun LoginScreen(
     // --- Fine Logica Google Sign-In ---
 
     LaunchedEffect(authState) {
-        if (authState is AuthUiState.Success) {
-            onLoginSuccess()
-            authViewModel.resetState()
+        when (authState) {
+            is AuthUiState.Success -> {
+                onLoginSuccess()
+                authViewModel.resetState()
+            }
+            is AuthUiState.ProfileCreationRequired -> {
+                onNavigateToCompleteProfile()
+                authViewModel.resetState()
+            }
+            else -> { /* Nessuna azione per altri stati */ }
         }
     }
 
@@ -96,6 +104,7 @@ fun LoginScreen(
             else -> {
                 Button(
                     onClick = {
+                        Log.d("UniAdvisorAuth", "PULSANTE LOGIN CLICCATO")
                         authViewModel.signIn(email, password)
                     },
                     modifier = Modifier.fillMaxWidth()
@@ -103,7 +112,6 @@ fun LoginScreen(
                     Text("Accedi")
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                // PULSANTE GOOGLE
                 OutlinedButton(
                     onClick = { googleSignInLauncher.launch(googleSignInClient.signInIntent) },
                     modifier = Modifier.fillMaxWidth()

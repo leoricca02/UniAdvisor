@@ -1,23 +1,23 @@
 // file: data/models.kt
 package com.riccaturrini.uniadvisor.data
 
-data class User(
-    val uid: String = "",
-    val email: String = "",
-    val faculty: String = ""
+// Corrisponde a schemas/user.py -> UserProfileCreate
+data class UserProfileCreate(
+    val first_name: String,
+    val last_name: String,
+    val birth_date: String, // Mandiamo la data come stringa "YYYY-MM-DD"
+    val city: String
 )
 
-data class Course(
-    val id: String = "",
-    val name: String = "",
-    val professor: String = "",
-    val faculty: String = ""
-)
-
-data class Review(
-    val authorId: String = "",
-    val text: String = "",
-    val feasibility: Int = 0, // Voto da 1 a 5
-    val difficulty: Int = 0, // Voto da 1 a 5
-    val availability: Int = 0  // Voto da 1 a 5
+// Corrisponde a schemas/user.py -> UserResponse
+data class UserResponse(
+    val id: Int,
+    val firebase_uid: String,
+    val email: String,
+    val first_name: String,
+    val last_name: String,
+    val birth_date: String,
+    val city: String,
+    val is_admin: Boolean,
+    val faculty_id: Int?
 )

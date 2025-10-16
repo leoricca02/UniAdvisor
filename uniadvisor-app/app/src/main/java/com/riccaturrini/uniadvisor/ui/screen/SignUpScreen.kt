@@ -6,6 +6,8 @@ import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,20 +20,28 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.riccaturrini.uniadvisor.R
+import com.riccaturrini.uniadvisor.data.UserProfileCreate
 import com.riccaturrini.uniadvisor.viewmodel.AuthUiState
 import com.riccaturrini.uniadvisor.viewmodel.AuthViewModel
 
 @Composable
 fun SignUpScreen(
     authViewModel: AuthViewModel = viewModel(),
-    onSignUpSuccess: () -> Unit
+    onSignUpSuccess: () -> Unit,
+    onNavigateToLogin: () -> Unit,
+    onNavigateToCompleteProfile: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
+    var birthDate by remember { mutableStateOf("") }
+    var city by remember { mutableStateOf("") }
+
     val authState by authViewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    // --- Logica per Google Sign-In ---
+    // --- Logica per Google Sign-In (INVARIATA) ---
     val googleSignInOptions = remember {
         GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(context.getString(R.string.your_web_client_id))
@@ -57,42 +67,46 @@ fun SignUpScreen(
     // --- Fine Logica Google Sign-In ---
 
     LaunchedEffect(authState) {
-        if (authState is AuthUiState.Success) {
-            onSignUpSuccess()
-            authViewModel.resetState()
+        when(authState) {
+            is AuthUiState.Success -> {
+                onSignUpSuccess()
+                authViewModel.resetState()
+            }
+            is AuthUiState.ProfileCreationRequired -> {
+                onNavigateToCompleteProfile()
+                authViewModel.resetState()
+            }
+            else -> { /* Non fare nulla per Idle, Loading o Error */ }
         }
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text("Registrati", style = MaterialTheme.typography.headlineMedium)
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth()
-        )
+        OutlinedTextField(value = firstName, onValueChange = { firstName = it }, label = { Text("Nome") }, modifier = Modifier.fillMaxWidth())
         Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(value = lastName, onValueChange = { lastName = it }, label = { Text("Cognome") }, modifier = Modifier.fillMaxWidth())
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(value = birthDate, onValueChange = { birthDate = it }, label = { Text("Data di Nascita (YYYY-MM-DD)") }, modifier = Modifier.fillMaxWidth())
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(value = city, onValueChange = { city = it }, label = { Text("Città") }, modifier = Modifier.fillMaxWidth())
 
-        OutlinedTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Password") },
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier.fillMaxWidth()
-        )
-        // TESTO REQUISITI PASSWORD
-        Text(
-            text = "La password deve contenere almeno 6 caratteri.",
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(start = 4.dp, top = 4.dp)
-        )
         Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Password") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
+        Text(text = "La password deve contenere almeno 6 caratteri.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 4.dp, top = 4.dp))
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         when (authState) {
             is AuthUiState.Loading -> {
@@ -101,20 +115,27 @@ fun SignUpScreen(
             else -> {
                 Button(
                     onClick = {
-                        Log.d("UniAdvisorAuth", "PULSANTE REGISTRAZIONE CLICCATO") // <-- AGGIUNGI QUESTA RIGA
-                        authViewModel.createUser(email, password)
+                        val profileData = UserProfileCreate(
+                            first_name = firstName,
+                            last_name = lastName,
+                            birth_date = birthDate,
+                            city = city
+                        )
+                        authViewModel.createUserAndProfile(email, password, profileData)
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Crea Account")
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                // PULSANTE GOOGLE
                 OutlinedButton(
                     onClick = { googleSignInLauncher.launch(googleSignInClient.signInIntent) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Registrati con Google")
+                }
+                TextButton(onClick = onNavigateToLogin) {
+                    Text("Hai già un account? Accedi")
                 }
             }
         }

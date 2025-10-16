@@ -421,3 +421,4 @@ styleable SignInButton buttonSize colorScheme scopeUris
 xml backup_rules
 xml data_extraction_rules
 xml image_share_filepaths
+xml network_security_config
