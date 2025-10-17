@@ -21,6 +21,7 @@ import androidx.navigation.compose.rememberNavController
 import com.riccaturrini.uniadvisor.ui.screen.CompleteProfileScreen
 import com.riccaturrini.uniadvisor.ui.screen.LoginScreen
 import com.riccaturrini.uniadvisor.ui.screen.SignUpScreen
+import com.riccaturrini.uniadvisor.ui.screen.SplashScreen
 import com.riccaturrini.uniadvisor.ui.theme.UniAdvisorTheme
 import com.riccaturrini.uniadvisor.viewmodel.AuthUiState
 import com.riccaturrini.uniadvisor.viewmodel.AuthViewModel
@@ -61,8 +62,12 @@ fun UniAdvisorApp() {
         // NavHost con navigazione basata sullo stato di autenticazione
         NavHost(
             navController = navController,
-            startDestination = "login"
+            startDestination = "splash"
         ) {
+            composable("splash") {
+                SplashScreen(navController = navController)
+            }
+
             composable("login") {
                 LoginScreen(
                     authViewModel = authViewModel,

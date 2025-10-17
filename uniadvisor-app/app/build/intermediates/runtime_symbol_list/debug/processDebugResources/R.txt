@@ -149,6 +149,8 @@ int drawable notification_template_icon_bg 0x7f06002a
 int drawable notification_template_icon_low_bg 0x7f06002b
 int drawable notification_tile_bg 0x7f06002c
 int drawable notify_panel_notification_icon_bg 0x7f06002d
+int drawable uniadvisor_logo 0x7f06002f
+int drawable uniadvisor_transparent 0x7f06002e
 int id accessibility_action_clickable_span 0x7f070000
 int id accessibility_custom_action_0 0x7f070001
 int id accessibility_custom_action_1 0x7f070002
