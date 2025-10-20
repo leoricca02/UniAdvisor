@@ -34,7 +34,7 @@ fun LoginScreen(
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    val authState by authViewModel.uiState.collectAsState()
+    val authState by authViewModel.authUiState.collectAsState()
     val context = LocalContext.current
 
     // --- Google Sign-In ---

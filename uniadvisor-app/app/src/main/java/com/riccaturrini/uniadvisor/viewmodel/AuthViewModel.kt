@@ -1,143 +1,176 @@
-// File: viewmodel/AuthViewModel.kt
 package com.riccaturrini.uniadvisor.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import com.riccaturrini.uniadvisor.data.UserProfileCreate
+import com.riccaturrini.uniadvisor.data.UserResponse
 import com.riccaturrini.uniadvisor.repository.UserRepository
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.tasks.await
 
 sealed class AuthUiState {
     object Idle : AuthUiState()
     object Loading : AuthUiState()
+    data class Error(val message: String) : AuthUiState()
     object Success : AuthUiState()
     object ProfileCreationRequired : AuthUiState()
-    data class Error(val message: String) : AuthUiState()
 }
 
-class AuthViewModel(
-    private val repository: UserRepository = UserRepository()
-) : ViewModel() {
+sealed class ProfileCreationState {
+    object Idle : ProfileCreationState()
+    object Loading : ProfileCreationState()
+    object Success : ProfileCreationState()
+    data class Error(val message: String) : ProfileCreationState()
+}
 
-    private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
-    val uiState: StateFlow<AuthUiState> = _uiState
+class AuthViewModel : ViewModel() {
 
-    fun resetState() {
-        _uiState.value = AuthUiState.Idle
+    private val auth = Firebase.auth
+    private val userRepository = UserRepository()
+
+    private val _authUiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
+    val authUiState: StateFlow<AuthUiState> = _authUiState
+
+    private val _profileState = MutableStateFlow<ProfileCreationState>(ProfileCreationState.Idle)
+    val profileState: StateFlow<ProfileCreationState> = _profileState
+
+    private val _currentUserData = MutableStateFlow<UserResponse?>(null)
+    val currentUserData: StateFlow<UserResponse?> = _currentUserData
+
+    fun checkUserProfile() {
+        viewModelScope.launch {
+            val firebaseUser = auth.currentUser
+            if (firebaseUser == null) {
+                _authUiState.value = AuthUiState.Error("No user logged in")
+                return@launch
+            }
+
+            try {
+                val token = firebaseUser.getIdToken(true).await().token
+                if (token == null) {
+                    _authUiState.value = AuthUiState.Error("Failed to get auth token")
+                    return@launch
+                }
+                val profileResponse = userRepository.getMyProfile()
+                if (profileResponse != null) {
+                    _currentUserData.value = profileResponse
+                    _authUiState.value = AuthUiState.Success
+                } else {
+                    _authUiState.value = AuthUiState.ProfileCreationRequired
+                }
+            } catch (e: Exception) {
+                _authUiState.value = AuthUiState.Error(e.message ?: "Error checking profile")
+            }
+        }
     }
 
-    /**
-     * Login con email e password.
-     */
+    fun createUserAndProfile(profileData: UserProfileCreate) {
+        viewModelScope.launch {
+            _profileState.value = ProfileCreationState.Loading
+            try {
+                val token = auth.currentUser?.getIdToken(false)?.await()?.token
+                if (token == null) {
+                    Log.e("AuthViewModel", "Token is null")
+                    _profileState.value = ProfileCreationState.Error("User not authenticated")
+                    return@launch
+                }
+
+                Log.d("AuthViewModel", "Creating profile with data: $profileData")
+                val response = userRepository.createProfile(profileData)
+                if (response != null) {
+                    Log.d("AuthViewModel", "Profile created successfully: $response")
+                    _currentUserData.value = response
+                    _profileState.value = ProfileCreationState.Success
+                } else {
+                    Log.e("AuthViewModel", "Profile creation returned null")
+                    _profileState.value = ProfileCreationState.Error("Profile creation failed: Server returned empty response")
+                }
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Profile creation exception: ${e.message}", e)
+                _profileState.value = ProfileCreationState.Error(e.message ?: "An unexpected error occurred")
+            }
+        }
+    }
+
+    fun resetProfileState() {
+        _profileState.value = ProfileCreationState.Idle
+    }
+
     fun signIn(email: String, password: String) {
         viewModelScope.launch {
-            _uiState.value = AuthUiState.Loading
+            _authUiState.value = AuthUiState.Loading
             try {
-                withContext(Dispatchers.IO) {
-                    Firebase.auth.signInWithEmailAndPassword(email, password).await()
-                }
+                Firebase.auth.signInWithEmailAndPassword(email, password).await()
                 checkUserProfile()
             } catch (e: Exception) {
-                _uiState.value = AuthUiState.Error("Login failed: ${e.message}")
+                _authUiState.value = AuthUiState.Error(e.message ?: "Login fallito")
             }
         }
     }
 
-    /**
-     * Login tramite Google ID Token.
-     */
     fun signInWithGoogle(idToken: String) {
         viewModelScope.launch {
-            _uiState.value = AuthUiState.Loading
+            _authUiState.value = AuthUiState.Loading
             try {
                 val credential = GoogleAuthProvider.getCredential(idToken, null)
-                withContext(Dispatchers.IO) {
-                    Firebase.auth.signInWithCredential(credential).await()
-                }
+                Firebase.auth.signInWithCredential(credential).await()
                 checkUserProfile()
             } catch (e: Exception) {
-                _uiState.value = AuthUiState.Error("Google sign-in failed: ${e.message}")
+                _authUiState.value = AuthUiState.Error(e.message ?: "Login con Google fallito")
             }
         }
     }
 
-    /**
-     * Registrazione con email e password.
-     */
     fun signUp(email: String, password: String) {
         viewModelScope.launch {
-            _uiState.value = AuthUiState.Loading
+            _authUiState.value = AuthUiState.Loading
             try {
-                withContext(Dispatchers.IO) {
-                    Firebase.auth.createUserWithEmailAndPassword(email, password).await()
-                }
-                _uiState.value = AuthUiState.ProfileCreationRequired
+                Firebase.auth.createUserWithEmailAndPassword(email, password).await()
+                _authUiState.value = AuthUiState.ProfileCreationRequired
             } catch (e: Exception) {
-                _uiState.value = AuthUiState.Error("Sign-up failed: ${e.message}")
+                _authUiState.value = AuthUiState.Error(e.message ?: "Registrazione fallita")
             }
         }
     }
 
-    /**
-     * Funzione combinata per creare utente Firebase e profilo backend.
-     */
-    fun createUserAndProfile(email: String, password: String, profileData: UserProfileCreate) {
+    fun signUpWithProfile(email: String, password: String, profileData: UserProfileCreate) {
         viewModelScope.launch {
-            _uiState.value = AuthUiState.Loading
+            _authUiState.value = AuthUiState.Loading
             try {
-                withContext(Dispatchers.IO) {
-                    Firebase.auth.createUserWithEmailAndPassword(email, password).await()
-                    repository.createUserProfile(profileData)
-                }
-                _uiState.value = AuthUiState.Success
-            } catch (e: Exception) {
-                _uiState.value = AuthUiState.Error("Sign-up or profile creation failed: ${e.message}")
-            }
-        }
-    }
+                Firebase.auth.createUserWithEmailAndPassword(email, password).await()
 
-    /**
-     * Crea solo il profilo utente dopo la registrazione.
-     */
-    fun createProfile(profileData: UserProfileCreate) {
-        viewModelScope.launch {
-            _uiState.value = AuthUiState.Loading
-            try {
-                withContext(Dispatchers.IO) {
-                    repository.createUserProfile(profileData)
+                val token = auth.currentUser?.getIdToken(false)?.await()?.token
+                if (token == null) {
+                    Log.e("AuthViewModel", "Token is null after signup")
+                    _authUiState.value = AuthUiState.Error("Authentication failed")
+                    return@launch
                 }
-                _uiState.value = AuthUiState.Success
-            } catch (e: Exception) {
-                _uiState.value = AuthUiState.Error("Profile creation failed: ${e.message}")
-            }
-        }
-    }
 
-    /**
-     * Controlla se esiste un profilo utente nel backend.
-     */
-    private fun checkUserProfile() {
-        viewModelScope.launch {
-            try {
-                val profile = withContext(Dispatchers.IO) {
-                    repository.getMyProfile()
-                }
-                _uiState.value = if (profile == null) {
-                    AuthUiState.ProfileCreationRequired
+                Log.d("AuthViewModel", "Creating profile with data: $profileData")
+                val response = userRepository.createProfile(profileData)
+
+                if (response != null) {
+                    Log.d("AuthViewModel", "Profile created successfully: $response")
+                    _currentUserData.value = response
+                    _authUiState.value = AuthUiState.Success
                 } else {
-                    AuthUiState.Success
+                    Log.e("AuthViewModel", "Profile creation returned null - possibly 500 error")
+                    _authUiState.value = AuthUiState.Error("Errore nel creare il profilo. Riprova più tardi.")
                 }
             } catch (e: Exception) {
-                _uiState.value = AuthUiState.Error("Profile check failed: ${e.message}")
+                Log.e("AuthViewModel", "SignUp with profile exception: ${e.message}", e)
+                _authUiState.value = AuthUiState.Error(e.message ?: "Registrazione fallita")
             }
         }
+    }
+
+    fun resetState() {
+        _authUiState.value = AuthUiState.Idle
     }
 }
