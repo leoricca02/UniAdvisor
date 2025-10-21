@@ -1,19 +1,23 @@
 package com.riccaturrini.uniadvisor.ui.screen
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.riccaturrini.uniadvisor.R
 import com.riccaturrini.uniadvisor.viewmodel.EnrollmentState
 import com.riccaturrini.uniadvisor.viewmodel.FacultyUiState
 import com.riccaturrini.uniadvisor.viewmodel.FacultyViewModel
 import com.riccaturrini.uniadvisor.viewmodel.ProfileViewModel
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,118 +29,159 @@ fun SelectFacultyScreen(
     val facultyState by facultyViewModel.uiState.collectAsState()
     val enrollState by profileViewModel.enrollState.collectAsState()
 
-    // Navigate on successful enrollment
+    var expanded by remember { mutableStateOf(false) }
+    var selectedFaculty by remember { mutableStateOf<String?>(null) }
+    var selectedFacultyId by remember { mutableStateOf<Int?>(null) }
+    var hasNavigated by remember { mutableStateOf(false) }
+
+    // Naviga solo dopo successo enrollment
     LaunchedEffect(enrollState) {
-        if (enrollState is EnrollmentState.Success) {
+        if (enrollState is EnrollmentState.Success && !hasNavigated) {
+            hasNavigated = true
+            delay(200) // evita race con Android activity lifecycle
             onFacultySelected()
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Seleziona la tua Facoltà") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primaryContainer,
+                        MaterialTheme.colorScheme.background
+                    )
                 )
-            )
-        }
-    ) { paddingValues ->
+            ),
+        contentAlignment = Alignment.Center
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Text(
-                text = "Scegli la facoltà a cui sei iscritto:",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
+            // LOGO
+            Icon(
+                painter = painterResource(id = R.drawable.uniadvisor_logo),
+                contentDescription = "App Logo",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .size(180.dp)
+                    .padding(bottom = 16.dp)
             )
 
-            when (val state = facultyState) {
-                is FacultyUiState.Loading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
+            Spacer(modifier = Modifier.height(32.dp))
 
-                is FacultyUiState.Success -> {
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        items(state.faculties) { faculty ->
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        profileViewModel.enrollInFaculty(faculty.id)
-                                    },
-                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = faculty.name,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-                            }
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                elevation = CardDefaults.cardElevation(10.dp),
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    when (val state = facultyState) {
+                        is FacultyUiState.Loading -> {
+                            CircularProgressIndicator()
                         }
-                    }
-                }
 
-                is FacultyUiState.Error -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        is FacultyUiState.Error -> {
                             Text(
                                 text = state.message,
                                 color = MaterialTheme.colorScheme.error,
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = { facultyViewModel.uiState }) {
+                            Button(onClick = {
+                                val m = facultyViewModel.javaClass.getDeclaredMethod("fetchFaculties")
+                                m.isAccessible = true
+                                m.invoke(facultyViewModel)
+                            }) {
                                 Text("Riprova")
+                            }
+                        }
+
+                        is FacultyUiState.Success -> {
+                            Text(
+                                text = "Scegli la tua facoltà",
+                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // Dropdown
+                            ExposedDropdownMenuBox(
+                                expanded = expanded,
+                                onExpandedChange = { expanded = !expanded }
+                            ) {
+                                OutlinedTextField(
+                                    value = selectedFaculty ?: "",
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Facoltà") },
+                                    trailingIcon = {
+                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                                    },
+                                    modifier = Modifier
+                                        .menuAnchor()
+                                        .fillMaxWidth()
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = expanded,
+                                    onDismissRequest = { expanded = false }
+                                ) {
+                                    state.faculties.forEach { faculty ->
+                                        DropdownMenuItem(
+                                            text = { Text(faculty.name) },
+                                            onClick = {
+                                                selectedFaculty = faculty.name
+                                                selectedFacultyId = faculty.id
+                                                expanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            when (enrollState) {
+                                is EnrollmentState.Loading -> {
+                                    CircularProgressIndicator()
+                                }
+
+                                else -> {
+                                    Button(
+                                        onClick = {
+                                            selectedFacultyId?.let {
+                                                profileViewModel.enrollInFaculty(it)
+                                            }
+                                        },
+                                        enabled = selectedFacultyId != null,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Conferma")
+                                    }
+                                }
+                            }
+
+                            if (enrollState is EnrollmentState.Error) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = (enrollState as EnrollmentState.Error).message,
+                                    color = MaterialTheme.colorScheme.error
+                                )
                             }
                         }
                     }
                 }
-            }
-
-            // Show enrollment loading/error state
-            when (val state = enrollState) {
-                is EnrollmentState.Loading -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-
-                is EnrollmentState.Error -> {
-                    Text(
-                        text = state.message,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(top = 16.dp),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-
-                else -> { /* Idle or Success - do nothing */ }
             }
         }
     }
