@@ -4,6 +4,7 @@ import android.app.Activity
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,7 +14,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -82,8 +86,7 @@ fun SignUpScreen(
             val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
             try {
                 val account = task.getResult(ApiException::class.java)!!
-                val idToken = account.idToken!!
-                authViewModel.signInWithGoogle(idToken)
+                authViewModel.signInWithGoogle(account.idToken!!)
             } catch (e: ApiException) {
                 Log.w("SignUpScreen", "Google sign in failed", e)
             }
@@ -97,11 +100,12 @@ fun SignUpScreen(
         }
     }
 
+    // --- UI ---
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
-                Brush.verticalGradient(
+                Brush.linearGradient(
                     colors = listOf(
                         MaterialTheme.colorScheme.primaryContainer,
                         MaterialTheme.colorScheme.background
@@ -110,241 +114,243 @@ fun SignUpScreen(
             ),
         contentAlignment = Alignment.Center
     ) {
-        Card(
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
             modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .padding(16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                .fillMaxSize()
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState())
         ) {
-            Column(
+            // LOGO
+            Icon(
+                painter = painterResource(id = R.drawable.uniadvisor_logo), // XML vettoriale consigliato
+                contentDescription = "App Logo",
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .size(180.dp)
+                    .padding(bottom = 8.dp)
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                elevation = CardDefaults.cardElevation(10.dp),
+                shape = MaterialTheme.shapes.large
             ) {
-                Text("Registrati", style = MaterialTheme.typography.headlineMedium)
-                Spacer(modifier = Modifier.height(16.dp))
-
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    label = { Text("Email") },
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = email.isNotEmpty() && !isEmailValid
-                )
-                if (email.isNotEmpty() && !isEmailValid) {
-                    Text(
-                        "Email non valida",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.align(Alignment.Start).padding(start = 16.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = firstName,
-                    onValueChange = { firstName = it },
-                    label = { Text("Nome") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = lastName,
-                    onValueChange = { lastName = it },
-                    label = { Text("Cognome") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Data di nascita
-                Text(
-                    text = "Data di Nascita",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.align(Alignment.Start).padding(bottom = 4.dp)
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // Day
-                    Box(modifier = Modifier.weight(1f)) {
-                        OutlinedButton(
-                            onClick = { expandedDay = true },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(selectedDay.toString())
-                        }
-                        DropdownMenu(
-                            expanded = expandedDay,
-                            onDismissRequest = { expandedDay = false }
-                        ) {
-                            days.forEach { day ->
-                                DropdownMenuItem(
-                                    text = { Text(day.toString()) },
-                                    onClick = {
-                                        selectedDay = day
-                                        expandedDay = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    // Month
-                    Box(modifier = Modifier.weight(2f)) {
-                        OutlinedButton(
-                            onClick = { expandedMonth = true },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(months.find { it.first == selectedMonth }?.second ?: "")
-                        }
-                        DropdownMenu(
-                            expanded = expandedMonth,
-                            onDismissRequest = { expandedMonth = false }
-                        ) {
-                            months.forEach { (num, name) ->
-                                DropdownMenuItem(
-                                    text = { Text(name) },
-                                    onClick = {
-                                        selectedMonth = num
-                                        expandedMonth = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    // Year
-                    Box(modifier = Modifier.weight(1.5f)) {
-                        OutlinedButton(
-                            onClick = { expandedYear = true },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(selectedYear.toString())
-                        }
-                        DropdownMenu(
-                            expanded = expandedYear,
-                            onDismissRequest = { expandedYear = false }
-                        ) {
-                            years.forEach { year ->
-                                DropdownMenuItem(
-                                    text = { Text(year.toString()) },
-                                    onClick = {
-                                        selectedYear = year
-                                        expandedYear = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = city,
-                    onValueChange = { city = it },
-                    label = { Text("Città") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text("Password") },
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = confirmPassword,
-                    onValueChange = { confirmPassword = it },
-                    label = { Text("Conferma Password") },
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth(),
-                    isError = confirmPassword.isNotEmpty() && !isConfirmPasswordValid
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp)
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        "Requisiti password:",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontStyle = FontStyle.Italic
+                        "Crea il tuo account",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 16.dp)
                     )
-                    Text(
-                        "• Minimo 6 caratteri",
-                        color = if (isPasswordLengthValid) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
-                        fontSize = 12.sp,
-                        fontStyle = FontStyle.Italic
-                    )
-                    Text(
-                        "• Almeno una maiuscola",
-                        color = if (isPasswordUppercaseValid) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
-                        fontSize = 12.sp,
-                        fontStyle = FontStyle.Italic
-                    )
-                    Text(
-                        "• Le password devono coincidere",
-                        color = if (isConfirmPasswordValid) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
-                        fontSize = 12.sp,
-                        fontStyle = FontStyle.Italic
-                    )
-                }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                if (authState is AuthUiState.Loading) {
-                    CircularProgressIndicator(modifier = Modifier.padding(8.dp))
-                } else {
-                    Button(
-                        onClick = {
-                            val birthDateStr = String.format("%04d-%02d-%02d", selectedYear, selectedMonth, selectedDay)
-                            val profileData = UserProfileCreate(
-                                first_name = firstName,
-                                last_name = lastName,
-                                birth_date = birthDateStr,
-                                city = city
-                            )
-                            authViewModel.signUpWithProfile(email, password, profileData)
-                        },
+                    // --- Campi ---
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("Email") },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = firstName.isNotEmpty() && lastName.isNotEmpty() &&
-                                city.isNotEmpty() && email.isNotEmpty() && isEmailValid &&
-                                isPasswordLengthValid && isPasswordUppercaseValid && isConfirmPasswordValid
-                    ) {
-                        Text("Registrati")
+                        isError = email.isNotEmpty() && !isEmailValid
+                    )
+                    if (email.isNotEmpty() && !isEmailValid) {
+                        Text(
+                            "Email non valida",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.align(Alignment.Start).padding(start = 8.dp)
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    OutlinedButton(
-                        onClick = { googleSignInLauncher.launch(googleSignInClient.signInIntent) },
+                    OutlinedTextField(
+                        value = firstName,
+                        onValueChange = { firstName = it },
+                        label = { Text("Nome") },
                         modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Registrati con Google")
-                    }
-
-                    TextButton(onClick = onNavigateToLogin) {
-                        Text("Hai già un account? Accedi")
-                    }
-                }
-
-                if (authState is AuthUiState.Error) {
-                    Text(
-                        text = (authState as AuthUiState.Error).message,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(top = 8.dp)
                     )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = lastName,
+                        onValueChange = { lastName = it },
+                        label = { Text("Cognome") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // --- Data di nascita ---
+                    Text(
+                        "Data di nascita",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier
+                            .align(Alignment.Start)
+                            .padding(bottom = 4.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Wrap each DropdownSelector in a Box with weight so they sit on the same row
+                        Box(modifier = Modifier.weight(1f)) {
+                            DropdownSelector("Giorno", selectedDay.toString(), days.map { it.toString() }) {
+                                selectedDay = it
+                            }
+                        }
+
+                        Box(modifier = Modifier.weight(1.2f)) {
+                            DropdownSelector(
+                                "Mese",
+                                months.find { it.first == selectedMonth }?.second ?: "",
+                                months.map { it.second }
+                            ) {
+                                selectedMonth = it
+                            }
+                        }
+
+                        Box(modifier = Modifier.weight(1f)) {
+                            DropdownSelector("Anno", selectedYear.toString(), years.map { it.toString() }) {
+                                selectedYear = it
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = city,
+                        onValueChange = { city = it },
+                        label = { Text("Città") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        label = { Text("Conferma Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(),
+                        isError = confirmPassword.isNotEmpty() && !isConfirmPasswordValid
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Requisiti password (diventano verdi quando rispettati)
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text("Requisiti password:", fontStyle = FontStyle.Italic, fontSize = 13.sp)
+                        val successGreen = Color(0xFF2E7D32)
+                        Text(
+                            "• Minimo 6 caratteri",
+                            color = if (isPasswordLengthValid) successGreen else MaterialTheme.colorScheme.error
+                        )
+                        Text(
+                            "• Almeno una maiuscola",
+                            color = if (isPasswordUppercaseValid) successGreen else MaterialTheme.colorScheme.error
+                        )
+                        Text(
+                            "• Le password devono coincidere",
+                            color = if (isConfirmPasswordValid) successGreen else MaterialTheme.colorScheme.error
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    if (authState is AuthUiState.Loading) {
+                        CircularProgressIndicator()
+                    } else {
+                        Button(
+                            onClick = {
+                                val birthDateStr = String.format("%04d-%02d-%02d", selectedYear, selectedMonth, selectedDay)
+                                val profileData = UserProfileCreate(
+                                    first_name = firstName,
+                                    last_name = lastName,
+                                    birth_date = birthDateStr,
+                                    city = city
+                                )
+                                authViewModel.signUpWithProfile(email, password, profileData)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = firstName.isNotEmpty() && lastName.isNotEmpty() &&
+                                    city.isNotEmpty() && email.isNotEmpty() && isEmailValid &&
+                                    isPasswordLengthValid && isPasswordUppercaseValid && isConfirmPasswordValid
+                        ) {
+                            Text("Registrati")
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        OutlinedButton(
+                            onClick = { googleSignInLauncher.launch(googleSignInClient.signInIntent) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Registrati con Google") }
+
+                        TextButton(onClick = onNavigateToLogin) {
+                            Text("Hai già un account? Accedi")
+                        }
+                    }
+
+                    if (authState is AuthUiState.Error) {
+                        Text(
+                            text = (authState as AuthUiState.Error).message,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Componente helper per i menu a discesa (giorno, mese, anno)
+ */
+@Composable
+fun DropdownSelector(label: String, selectedText: String, options: List<String>, onSelect: (Int) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text(selectedText) }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.heightIn(max = 200.dp)
+        ) {
+            options.forEachIndexed { index, option ->
+                DropdownMenuItem(
+                    text = { Text(option) },
+                    onClick = {
+                        onSelect(index + 1) // restituisce 1..N
+                        expanded = false
+                    }
+                )
             }
         }
     }

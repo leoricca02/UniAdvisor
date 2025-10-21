@@ -53,11 +53,13 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
     // The Compose BOM will manage the versions for all compose libraries
-    implementation(platform(libs.androidx.compose.bom))
+    implementation(platform("androidx.compose:compose-bom:2025.10.00"))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.ui)
+    implementation("androidx.compose.material:material-icons-extended")
 
     // Test dependencies
     testImplementation(libs.junit)
