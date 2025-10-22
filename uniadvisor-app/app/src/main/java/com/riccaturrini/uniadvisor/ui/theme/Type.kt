@@ -5,30 +5,46 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.googlefonts.GoogleFont
+import com.riccaturrini.uniadvisor.R
 
-// Set of Material typography styles to start with
+// Provider per Google Fonts
+private val provider = GoogleFont.Provider(
+    providerAuthority = "com.google.android.gms.fonts",
+    providerPackage = "com.google.android.gms",
+    // Devi avere questo array nel file res/values/font_certs.xml
+    certificates = R.array.com_google_android_gms_fonts_certs
+)
+
+// Font principale: Poppins
+private val poppinsFont = GoogleFont("Poppins")
+private val poppinsFamily = FontFamily(
+    androidx.compose.ui.text.googlefonts.Font(poppinsFont, provider)
+)
+
+// Tipografia generale dell’app UniAdvisor
 val Typography = Typography(
+    displayLarge = TextStyle(
+        fontFamily = poppinsFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 32.sp,
+        lineHeight = 40.sp
+    ),
+    titleLarge = TextStyle(
+        fontFamily = poppinsFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 22.sp,
+        lineHeight = 28.sp
+    ),
     bodyLarge = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = poppinsFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.5.sp
-    )
-    /* Other default text styles to override
-    titleLarge = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
-        letterSpacing = 0.sp
+        lineHeight = 22.sp
     ),
-    labelSmall = TextStyle(
-        fontFamily = FontFamily.Default,
+    labelLarge = TextStyle(
+        fontFamily = poppinsFamily,
         fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
+        fontSize = 14.sp
     )
-    */
 )
