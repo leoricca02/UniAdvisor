@@ -6,15 +6,14 @@ import com.riccaturrini.uniadvisor.data.Review
 import com.riccaturrini.uniadvisor.data.ReviewCreate
 import com.riccaturrini.uniadvisor.data.UserProfileCreate
 import com.riccaturrini.uniadvisor.data.UserResponse
+import com.riccaturrini.uniadvisor.data.Note
+import com.riccaturrini.uniadvisor.data.NoteRating
 import com.riccaturrini.uniadvisor.repository.AuthInterceptor
 import okhttp3.OkHttpClient
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.http.Body
-import retrofit2.http.GET
-import retrofit2.http.POST
-import retrofit2.http.Path
+import retrofit2.http.*
 
 interface ApiService {
     // User endpoints
@@ -23,6 +22,12 @@ interface ApiService {
 
     @POST("users/profile")
     suspend fun createUserProfile(@Body profileData: UserProfileCreate): Response<UserResponse>
+
+    @PUT("users/me")
+    suspend fun updateMyProfile(@Body profileData: UserProfileCreate): Response<UserResponse>
+
+    @DELETE("users/me")
+    suspend fun deleteMyAccount(): Response<Unit>
 
     // Faculty endpoints
     @GET("faculties")
@@ -33,6 +38,9 @@ interface ApiService {
 
     @GET("faculties/my-faculty")
     suspend fun getMyFaculty(): Response<Faculty>
+
+    @PUT("faculties/change-faculty/{faculty_id}")
+    suspend fun changeFaculty(@Path("faculty_id") facultyId: Int): Response<Unit>
 
     // Course endpoints
     @GET("courses/faculty/{faculty_id}")
@@ -53,6 +61,16 @@ interface ApiService {
 
     @POST("courses/{course_id}/reviews")
     suspend fun addReview(@Path("course_id") courseId: Int, @Body review: ReviewCreate): Response<Review>
+
+    @GET("courses/my-reviews")
+    suspend fun getMyReviews(): Response<List<Review>>
+
+    // Notes endpoints
+    @GET("notes/usr/my-notes")
+    suspend fun getMyNotes(): Response<List<Note>>
+
+    @GET("notes/usr/my-reviews")
+    suspend fun getMyNoteRatings(): Response<List<NoteRating>>
 }
 
 object ApiClient {

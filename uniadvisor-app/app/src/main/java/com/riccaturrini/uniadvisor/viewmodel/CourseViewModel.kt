@@ -1,5 +1,6 @@
 package com.riccaturrini.uniadvisor.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.riccaturrini.uniadvisor.data.Course
@@ -27,6 +28,7 @@ class CourseViewModel : ViewModel() {
     val courseListState: StateFlow<CourseListState> = _courseListState
 
     fun loadCoursesByFaculty(facultyId: Int) {
+        Log.d("CourseViewModel", "📚 loadCoursesByFaculty called with ID: $facultyId")
         viewModelScope.launch {
             _courseListState.value = CourseListState.Loading
             try {

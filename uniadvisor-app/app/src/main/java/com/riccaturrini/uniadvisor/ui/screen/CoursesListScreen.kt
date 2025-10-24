@@ -33,10 +33,10 @@ fun CoursesListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("I Miei Corsi") },
+                title = { Text("My Courses") },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -65,7 +65,7 @@ fun CoursesListScreen(
                             .padding(paddingValues),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Nessun corso disponibile per questa facoltà")
+                        Text("No courses available for this faculty")
                     }
                 } else {
                     LazyColumn(
@@ -103,7 +103,7 @@ fun CoursesListScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { courseViewModel.loadCoursesByFaculty(facultyId) }) {
-                            Text("Riprova")
+                            Text("Retry")
                         }
                     }
                 }
@@ -137,7 +137,7 @@ fun CourseCard(
                 style = MaterialTheme.typography.titleLarge
             )
             Text(
-                text = "Docente: $teacherName",
+                text = "Teacher: $teacherName",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -149,9 +149,9 @@ fun CourseCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                RatingChip("Chiarezza", avgClarity)
-                RatingChip("Fattibilità", avgFeasibility)
-                RatingChip("Disponibilità", avgAvailability)
+                RatingChip("Clarity", avgClarity)
+                RatingChip("Feasibility", avgFeasibility)
+                RatingChip("Availability", avgAvailability)
             }
         }
     }

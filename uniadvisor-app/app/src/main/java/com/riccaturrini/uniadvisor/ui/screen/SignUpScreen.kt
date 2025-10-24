@@ -146,7 +146,7 @@ fun SignUpScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        "Crea il tuo account",
+                        "Create your account",
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(bottom = 16.dp)
@@ -162,7 +162,7 @@ fun SignUpScreen(
                     )
                     if (email.isNotEmpty() && !isEmailValid) {
                         Text(
-                            "Email non valida",
+                            "Invalid email",
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.align(Alignment.Start).padding(start = 8.dp)
@@ -174,7 +174,7 @@ fun SignUpScreen(
                     OutlinedTextField(
                         value = firstName,
                         onValueChange = { firstName = it },
-                        label = { Text("Nome") },
+                        label = { Text("First Name") },
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -183,7 +183,7 @@ fun SignUpScreen(
                     OutlinedTextField(
                         value = lastName,
                         onValueChange = { lastName = it },
-                        label = { Text("Cognome") },
+                        label = { Text("Last Name") },
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -191,7 +191,7 @@ fun SignUpScreen(
 
                     // --- Data di nascita ---
                     Text(
-                        "Data di nascita",
+                        "Date of Birth",
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier
                             .align(Alignment.Start)
@@ -204,14 +204,14 @@ fun SignUpScreen(
                     ) {
                         // Wrap each DropdownSelector in a Box with weight so they sit on the same row
                         Box(modifier = Modifier.weight(1f)) {
-                            DropdownSelector("Giorno", selectedDay.toString(), days.map { it.toString() }) {
+                            DropdownSelector("Day", selectedDay.toString(), days.map { it.toString() }) {
                                 selectedDay = it
                             }
                         }
 
                         Box(modifier = Modifier.weight(1.2f)) {
                             DropdownSelector(
-                                "Mese",
+                                "Month",
                                 months.find { it.first == selectedMonth }?.second ?: "",
                                 months.map { it.second }
                             ) {
@@ -220,7 +220,7 @@ fun SignUpScreen(
                         }
 
                         Box(modifier = Modifier.weight(1f)) {
-                            DropdownSelector("Anno", selectedYear.toString(), years.map { it.toString() }) {
+                            DropdownSelector("Year", selectedYear.toString(), years.map { it.toString() }) {
                                 selectedYear = it
                             }
                         }
@@ -231,7 +231,7 @@ fun SignUpScreen(
                     OutlinedTextField(
                         value = city,
                         onValueChange = { city = it },
-                        label = { Text("Città") },
+                        label = { Text("City") },
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -250,7 +250,7 @@ fun SignUpScreen(
                     OutlinedTextField(
                         value = confirmPassword,
                         onValueChange = { confirmPassword = it },
-                        label = { Text("Conferma Password") },
+                        label = { Text("Confirm Password") },
                         visualTransformation = PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
                         isError = confirmPassword.isNotEmpty() && !isConfirmPasswordValid
@@ -258,20 +258,20 @@ fun SignUpScreen(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Requisiti password (diventano verdi quando rispettati)
+                    // Password requirements (turn green when met)
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        Text("Requisiti password:", fontStyle = FontStyle.Italic, fontSize = 13.sp)
+                        Text("Password requirements:", fontStyle = FontStyle.Italic, fontSize = 13.sp)
                         val successGreen = Color(0xFF2E7D32)
                         Text(
-                            "• Minimo 6 caratteri",
+                            "• Minimum 6 characters",
                             color = if (isPasswordLengthValid) successGreen else MaterialTheme.colorScheme.error
                         )
                         Text(
-                            "• Almeno una maiuscola",
+                            "• At least one uppercase letter",
                             color = if (isPasswordUppercaseValid) successGreen else MaterialTheme.colorScheme.error
                         )
                         Text(
-                            "• Le password devono coincidere",
+                            "• Passwords must match",
                             color = if (isConfirmPasswordValid) successGreen else MaterialTheme.colorScheme.error
                         )
                     }
@@ -297,7 +297,7 @@ fun SignUpScreen(
                                     city.isNotEmpty() && email.isNotEmpty() && isEmailValid &&
                                     isPasswordLengthValid && isPasswordUppercaseValid && isConfirmPasswordValid
                         ) {
-                            Text("Registrati")
+                            Text("Register")
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
@@ -305,10 +305,10 @@ fun SignUpScreen(
                         OutlinedButton(
                             onClick = { googleSignInLauncher.launch(googleSignInClient.signInIntent) },
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text("Registrati con Google") }
+                        ) { Text("Register with Google") }
 
                         TextButton(onClick = onNavigateToLogin) {
-                            Text("Hai già un account? Accedi")
+                            Text("Already have an account? Sign In")
                         }
                     }
 

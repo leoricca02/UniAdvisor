@@ -143,19 +143,19 @@ fun LoginScreen(
                         Button(
                             onClick = { authViewModel.signIn(email, password) },
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text("Accedi") }
+                        ) { Text("Login") }
 
                         Spacer(modifier = Modifier.height(8.dp))
 
                         OutlinedButton(
                             onClick = { googleSignInLauncher.launch(googleSignInClient.signInIntent) },
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text("Accedi con Google") }
+                        ) { Text("Sign in with Google") }
 
                         Spacer(modifier = Modifier.height(8.dp))
 
                         TextButton(onClick = onNavigateToSignUp) {
-                            Text("Non hai un account? Registrati")
+                            Text("Don't have an account? Sign up")
                         }
                     }
 

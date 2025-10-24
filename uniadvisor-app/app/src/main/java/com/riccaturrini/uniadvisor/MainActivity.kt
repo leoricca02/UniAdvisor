@@ -100,6 +100,12 @@ fun UniAdvisorApp() {
                     navController.navigate("select_faculty") {
                         popUpTo("splash") { inclusive = true }
                     }
+                },
+                // ✅ NUOVO: Gestione logout
+                onLogout = {
+                    navController.navigate("login") {
+                        popUpTo("splash") { inclusive = true }
+                    }
                 }
             )
         }

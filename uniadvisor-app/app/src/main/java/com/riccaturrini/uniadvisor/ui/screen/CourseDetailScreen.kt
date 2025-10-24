@@ -35,10 +35,10 @@ fun CourseDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Dettaglio Corso") },
+                title = { Text("Detail of the course") },
                 navigationIcon = {
                     IconButton(onClick = onBackPressed) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -52,7 +52,7 @@ fun CourseDetailScreen(
                     onClick = onAddReview,
                     containerColor = MaterialTheme.colorScheme.primary
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Aggiungi Recensione")
+                    Icon(Icons.Default.Add, contentDescription = "Add a review")
                 }
             }
         }
@@ -95,7 +95,7 @@ fun CourseDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
-                                    text = "Docente: ${state.data.teacherName}",
+                                    text = "Teacher: ${state.data.teacherName}",
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -118,17 +118,17 @@ fun CourseDetailScreen(
                                     .padding(16.dp)
                             ) {
                                 Text(
-                                    text = "Valutazioni Medie",
+                                    text = "Average Ratings",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
 
-                                RatingRow("Chiarezza", state.data.avgClarity)
+                                RatingRow("Clarity", state.data.avgClarity)
                                 Spacer(modifier = Modifier.height(8.dp))
-                                RatingRow("Fattibilità", state.data.avgFeasibility)
+                                RatingRow("Feasibility", state.data.avgFeasibility)
                                 Spacer(modifier = Modifier.height(8.dp))
-                                RatingRow("Disponibilità", state.data.avgAvailability)
+                                RatingRow("Availability", state.data.avgAvailability)
                             }
                         }
                     }
@@ -136,7 +136,7 @@ fun CourseDetailScreen(
                     // Reviews Section
                     item {
                         Text(
-                            text = "Recensioni (${state.data.reviews.size})",
+                            text = "Reviews (${state.data.reviews.size})",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
@@ -155,7 +155,7 @@ fun CourseDetailScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = "Nessuna recensione ancora.\nSii il primo a recensire!",
+                                        text = "No reviews yet.\nBe the first!!",
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -172,7 +172,7 @@ fun CourseDetailScreen(
                     item {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Materiali e Appunti",
+                            text = "Notes",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
@@ -214,7 +214,7 @@ fun CourseDetailScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = { courseDetailViewModel.loadCourseDetail(courseId) }) {
-                            Text("Riprova")
+                            Text("Retry")
                         }
                     }
                 }
@@ -269,9 +269,9 @@ fun ReviewCard(review: com.riccaturrini.uniadvisor.data.Review) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                RatingIndicator("Chiarezza", review.rating_clarity)
-                RatingIndicator("Fattibilità", review.rating_feasibility)
-                RatingIndicator("Disponibilità", review.rating_availability)
+                RatingIndicator("Clarity", review.rating_clarity)
+                RatingIndicator("Feasibility", review.rating_feasibility)
+                RatingIndicator("Availability", review.rating_availability)
             }
 
             if (review.comment?.isNotBlank() == true) {
@@ -284,7 +284,7 @@ fun ReviewCard(review: com.riccaturrini.uniadvisor.data.Review) {
 
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Pubblicata: ${review.created_at.take(10)}",
+                text = "Published: ${review.created_at.take(10)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

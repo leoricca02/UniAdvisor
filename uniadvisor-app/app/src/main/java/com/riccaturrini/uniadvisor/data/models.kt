@@ -55,3 +55,23 @@ data class ReviewCreate(
     val rating_availability: Int,
     val comment: String?
 )
+
+// Per le note
+data class Note(
+    val id: Int,
+    val course_id: Int,
+    val student_id: Int,
+    val file_id: String,
+    val description: String?,
+    val created_at: String
+)
+
+// Per le valutazioni delle note
+data class NoteRating(
+    val id: Int,
+    val note_id: Int,
+    val student_id: Int,
+    val rating: Int,
+    val comment: String?,
+    val created_at: String
+)

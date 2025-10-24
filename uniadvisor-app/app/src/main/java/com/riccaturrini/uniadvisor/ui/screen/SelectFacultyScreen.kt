@@ -103,13 +103,13 @@ fun SelectFacultyScreen(
                                 m.isAccessible = true
                                 m.invoke(facultyViewModel)
                             }) {
-                                Text("Riprova")
+                                Text("Retry")
                             }
                         }
 
                         is FacultyUiState.Success -> {
                             Text(
-                                text = "Scegli la tua facoltà",
+                                text = "Choose your faculty",
                                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                                 color = MaterialTheme.colorScheme.onBackground
                             )
@@ -125,7 +125,7 @@ fun SelectFacultyScreen(
                                     value = selectedFaculty ?: "",
                                     onValueChange = {},
                                     readOnly = true,
-                                    label = { Text("Facoltà") },
+                                    label = { Text("Faculty") },
                                     trailingIcon = {
                                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                                     },
@@ -167,7 +167,7 @@ fun SelectFacultyScreen(
                                         enabled = selectedFacultyId != null,
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Text("Conferma")
+                                        Text("Confirm")
                                     }
                                 }
                             }

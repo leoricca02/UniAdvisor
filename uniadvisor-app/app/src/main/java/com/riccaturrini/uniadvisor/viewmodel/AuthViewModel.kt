@@ -45,7 +45,9 @@ class AuthViewModel : ViewModel() {
 
     fun checkUserProfile() {
         viewModelScope.launch {
+            Log.d("AuthViewModel", "🔍 Checking user profile...")
             val firebaseUser = auth.currentUser
+            Log.d("AuthViewModel", "Firebase user: ${firebaseUser?.uid}")
             if (firebaseUser == null) {
                 _authUiState.value = AuthUiState.Error("No user logged in")
                 return@launch
@@ -59,6 +61,7 @@ class AuthViewModel : ViewModel() {
                 }
                 val profileResponse = userRepository.getMyProfile()
                 if (profileResponse != null) {
+                    Log.d("AuthViewModel", "✅ Profile loaded: $profileResponse")
                     _currentUserData.value = profileResponse
                     _authUiState.value = AuthUiState.Success
                 } else {
@@ -166,6 +169,20 @@ class AuthViewModel : ViewModel() {
             } catch (e: Exception) {
                 Log.e("AuthViewModel", "SignUp with profile exception: ${e.message}", e)
                 _authUiState.value = AuthUiState.Error(e.message ?: "Registrazione fallita")
+            }
+        }
+    }
+
+    fun signOut() {
+        viewModelScope.launch {
+            try {
+                Firebase.auth.signOut()
+                _currentUserData.value = null
+                _authUiState.value = AuthUiState.Idle
+                _profileState.value = ProfileCreationState.Idle
+                Log.d("AuthViewModel", "User signed out successfully")
+            } catch (e: Exception) {
+                Log.e("AuthViewModel", "Error during sign out: ${e.message}", e)
             }
         }
     }
