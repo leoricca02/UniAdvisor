@@ -9,12 +9,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 import com.riccaturrini.uniadvisor.ui.screen.*
 import com.riccaturrini.uniadvisor.ui.theme.UniAdvisorTheme
 import com.riccaturrini.uniadvisor.viewmodel.AuthUiState
 import com.riccaturrini.uniadvisor.viewmodel.AuthViewModel
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -27,6 +30,12 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onPause() {
+        super.onPause()
+        // Auto-logout when app goes to background
+        Firebase.auth.signOut()
+    }
 }
 
 @Composable
@@ -35,7 +44,7 @@ fun UniAdvisorApp() {
     val authViewModel: AuthViewModel = viewModel()
     val authState by authViewModel.authUiState.collectAsState()
 
-    // 🔹 Controllo stato login e navigazione automatica
+    // 🔹 Check login state and auto-navigate
     LaunchedEffect(authState) {
         when (authState) {
             is AuthUiState.Success -> {
@@ -61,7 +70,7 @@ fun UniAdvisorApp() {
         }
     }
 
-    // 🔹 Definizione delle rotte principali
+    // 🔹 Main navigation routes
     NavHost(navController = navController, startDestination = "splash") {
         composable("splash") {
             SplashScreen(navController = navController, authViewModel = authViewModel)
@@ -101,7 +110,7 @@ fun UniAdvisorApp() {
                         popUpTo("splash") { inclusive = true }
                     }
                 },
-                // ✅ NUOVO: Gestione logout
+                // ✅ Handle logout
                 onLogout = {
                     navController.navigate("login") {
                         popUpTo("splash") { inclusive = true }
@@ -119,7 +128,7 @@ fun UniAdvisorApp() {
             )
         }
 
-        // 🔹 Nuova home vera con BottomBar
+        // 🔹 Main dashboard with BottomBar
         composable("dashboard") {
             DashboardScreen()
         }

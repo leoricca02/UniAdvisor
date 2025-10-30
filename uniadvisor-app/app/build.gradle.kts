@@ -61,6 +61,7 @@ dependencies {
     implementation(libs.androidx.ui)
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.ui:ui-text-google-fonts")
+    implementation("androidx.lifecycle:lifecycle-process:2.8.0")
 
     // Test dependencies
     testImplementation(libs.junit)

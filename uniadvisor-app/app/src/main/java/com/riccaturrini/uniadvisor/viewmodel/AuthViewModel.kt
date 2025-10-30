@@ -43,60 +43,103 @@ class AuthViewModel : ViewModel() {
     private val _currentUserData = MutableStateFlow<UserResponse?>(null)
     val currentUserData: StateFlow<UserResponse?> = _currentUserData
 
+    /**
+     * Check if user profile exists in backend
+     * IMPROVED: Better error handling to distinguish between "profile not found" and network errors
+     */
     fun checkUserProfile() {
         viewModelScope.launch {
             Log.d("AuthViewModel", "🔍 Checking user profile...")
             val firebaseUser = auth.currentUser
-            Log.d("AuthViewModel", "Firebase user: ${firebaseUser?.uid}")
+
             if (firebaseUser == null) {
+                Log.w("AuthViewModel", "⚠️ No Firebase user found")
                 _authUiState.value = AuthUiState.Error("No user logged in")
                 return@launch
             }
 
+            Log.d("AuthViewModel", "Firebase user: ${firebaseUser.uid}")
+
             try {
+                _authUiState.value = AuthUiState.Loading
+
+                // Get fresh token
                 val token = firebaseUser.getIdToken(true).await().token
                 if (token == null) {
+                    Log.e("AuthViewModel", "❌ Failed to get auth token")
                     _authUiState.value = AuthUiState.Error("Failed to get auth token")
                     return@launch
                 }
+
+                Log.d("AuthViewModel", "✅ Got Firebase token, calling backend...")
+
+                // Try to get profile from backend
                 val profileResponse = userRepository.getMyProfile()
+
                 if (profileResponse != null) {
+                    // Profile exists - SUCCESS
                     Log.d("AuthViewModel", "✅ Profile loaded: $profileResponse")
                     _currentUserData.value = profileResponse
                     _authUiState.value = AuthUiState.Success
                 } else {
+                    // Profile not found (404) - Need to create profile
+                    Log.w("AuthViewModel", "⚠️ Profile not found in backend - need to create")
                     _authUiState.value = AuthUiState.ProfileCreationRequired
                 }
+
             } catch (e: Exception) {
+                Log.e("AuthViewModel", "💥 Error checking profile: ${e.message}", e)
                 _authUiState.value = AuthUiState.Error(e.message ?: "Error checking profile")
             }
         }
     }
 
+    /**
+     * Create user profile in backend
+     * IMPROVED: Better handling of duplicate profile attempts
+     */
     fun createUserAndProfile(profileData: UserProfileCreate) {
         viewModelScope.launch {
             _profileState.value = ProfileCreationState.Loading
+
             try {
                 val token = auth.currentUser?.getIdToken(false)?.await()?.token
                 if (token == null) {
-                    Log.e("AuthViewModel", "Token is null")
+                    Log.e("AuthViewModel", "❌ Token is null")
                     _profileState.value = ProfileCreationState.Error("User not authenticated")
                     return@launch
                 }
 
-                Log.d("AuthViewModel", "Creating profile with data: $profileData")
+                Log.d("AuthViewModel", "🟢 Creating profile with data: $profileData")
                 val response = userRepository.createProfile(profileData)
+
                 if (response != null) {
-                    Log.d("AuthViewModel", "Profile created successfully: $response")
+                    Log.d("AuthViewModel", "✅ Profile created successfully: $response")
                     _currentUserData.value = response
                     _profileState.value = ProfileCreationState.Success
                 } else {
-                    Log.e("AuthViewModel", "Profile creation returned null")
-                    _profileState.value = ProfileCreationState.Error("Profile creation failed: Server returned empty response")
+                    // Profile creation failed - might already exist
+                    Log.e("AuthViewModel", "❌ Profile creation returned null")
+
+                    // Try to fetch existing profile instead
+                    Log.d("AuthViewModel", "🔄 Attempting to fetch existing profile...")
+                    val existingProfile = userRepository.getMyProfile()
+
+                    if (existingProfile != null) {
+                        Log.d("AuthViewModel", "✅ Found existing profile: $existingProfile")
+                        _currentUserData.value = existingProfile
+                        _profileState.value = ProfileCreationState.Success
+                    } else {
+                        _profileState.value = ProfileCreationState.Error(
+                            "Profile creation failed. Please try again or contact support."
+                        )
+                    }
                 }
             } catch (e: Exception) {
-                Log.e("AuthViewModel", "Profile creation exception: ${e.message}", e)
-                _profileState.value = ProfileCreationState.Error(e.message ?: "An unexpected error occurred")
+                Log.e("AuthViewModel", "💥 Profile creation exception: ${e.message}", e)
+                _profileState.value = ProfileCreationState.Error(
+                    e.message ?: "An unexpected error occurred"
+                )
             }
         }
     }
@@ -112,7 +155,7 @@ class AuthViewModel : ViewModel() {
                 Firebase.auth.signInWithEmailAndPassword(email, password).await()
                 checkUserProfile()
             } catch (e: Exception) {
-                _authUiState.value = AuthUiState.Error(e.message ?: "Login fallito")
+                _authUiState.value = AuthUiState.Error(e.message ?: "Login failed")
             }
         }
     }
@@ -125,7 +168,7 @@ class AuthViewModel : ViewModel() {
                 Firebase.auth.signInWithCredential(credential).await()
                 checkUserProfile()
             } catch (e: Exception) {
-                _authUiState.value = AuthUiState.Error(e.message ?: "Login con Google fallito")
+                _authUiState.value = AuthUiState.Error(e.message ?: "Google login failed")
             }
         }
     }
@@ -137,7 +180,7 @@ class AuthViewModel : ViewModel() {
                 Firebase.auth.createUserWithEmailAndPassword(email, password).await()
                 _authUiState.value = AuthUiState.ProfileCreationRequired
             } catch (e: Exception) {
-                _authUiState.value = AuthUiState.Error(e.message ?: "Registrazione fallita")
+                _authUiState.value = AuthUiState.Error(e.message ?: "Registration failed")
             }
         }
     }
@@ -163,16 +206,20 @@ class AuthViewModel : ViewModel() {
                     _currentUserData.value = response
                     _authUiState.value = AuthUiState.Success
                 } else {
-                    Log.e("AuthViewModel", "Profile creation returned null - possibly 500 error")
-                    _authUiState.value = AuthUiState.Error("Errore nel creare il profilo. Riprova più tardi.")
+                    Log.e("AuthViewModel", "Profile creation returned null")
+                    _authUiState.value = AuthUiState.Error("Error creating profile. Please try again.")
                 }
             } catch (e: Exception) {
                 Log.e("AuthViewModel", "SignUp with profile exception: ${e.message}", e)
-                _authUiState.value = AuthUiState.Error(e.message ?: "Registrazione fallita")
+                _authUiState.value = AuthUiState.Error(e.message ?: "Registration failed")
             }
         }
     }
 
+    /**
+     * Sign out from Firebase
+     * This clears the Firebase session
+     */
     fun signOut() {
         viewModelScope.launch {
             try {
@@ -180,7 +227,7 @@ class AuthViewModel : ViewModel() {
                 _currentUserData.value = null
                 _authUiState.value = AuthUiState.Idle
                 _profileState.value = ProfileCreationState.Idle
-                Log.d("AuthViewModel", "User signed out successfully")
+                Log.d("AuthViewModel", "✅ User signed out successfully")
             } catch (e: Exception) {
                 Log.e("AuthViewModel", "Error during sign out: ${e.message}", e)
             }

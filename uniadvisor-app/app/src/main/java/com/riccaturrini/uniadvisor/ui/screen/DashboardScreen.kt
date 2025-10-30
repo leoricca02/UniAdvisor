@@ -12,6 +12,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.riccaturrini.uniadvisor.ui.components.UniAdvisorBottomBar
 import com.riccaturrini.uniadvisor.viewmodel.AuthViewModel
+import com.riccaturrini.uniadvisor.viewmodel.MyReviewsViewModel
 
 @Composable
 fun DashboardScreen(
@@ -44,7 +45,7 @@ fun DashboardScreen(
     ) { innerPadding ->
         DashboardNavGraph(
             navController = navController,
-            authViewModel = authViewModel, // ✅ Pass the ViewModel
+            authViewModel = authViewModel,
             modifier = Modifier.padding(innerPadding)
         )
     }
@@ -54,7 +55,7 @@ fun DashboardScreen(
 @Composable
 fun DashboardNavGraph(
     navController: NavHostController,
-    authViewModel: AuthViewModel, // ✅ Receive the ViewModel
+    authViewModel: AuthViewModel,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -66,7 +67,7 @@ fun DashboardNavGraph(
             HomeScreen(authViewModel = authViewModel)
         }
         composable("faculty") {
-            FacultyScreen(authViewModel = authViewModel) // ✅ Pass it here!
+            FacultyScreen(authViewModel = authViewModel)
         }
         composable("reviews") {
             ReviewsScreen(authViewModel = authViewModel)
