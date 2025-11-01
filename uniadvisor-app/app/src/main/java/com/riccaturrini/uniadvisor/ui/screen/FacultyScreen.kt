@@ -14,7 +14,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -23,7 +22,7 @@ import com.riccaturrini.uniadvisor.viewmodel.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FacultyScreen(
-    authViewModel: AuthViewModel, // ✅ NO default viewModel() - must be passed from parent
+    authViewModel: AuthViewModel,
     courseViewModel: CourseViewModel = viewModel()
 ) {
     val navController = rememberNavController()
@@ -45,7 +44,7 @@ fun FacultyScreen(
                 if (!hasLoaded || facultyId != fId) {
                     Log.d("FacultyScreen", "Loading courses for faculty: $fId")
                     facultyId = fId
-                    facultyName = "Your Faculty" // You can fetch this from backend if needed
+                    facultyName = "Your Faculty"
                     courseViewModel.loadCoursesByFaculty(fId)
                     hasLoaded = true
                 }
@@ -75,30 +74,14 @@ fun FacultyScreen(
             )
         }
 
+        // ✅ FIXED: Updated to use new CourseDetailScreen signature
         composable("course_detail/{courseId}") { backStackEntry ->
             val courseId = backStackEntry.arguments?.getString("courseId")?.toIntOrNull()
             if (courseId != null) {
                 CourseDetailScreen(
                     courseId = courseId,
-                    onBackPressed = { navController.popBackStack() },
-                    onAddReview = {
-                        navController.navigate("add_review/$courseId")
-                    }
-                )
-            }
-        }
-
-        composable("add_review/{courseId}") { backStackEntry ->
-            val courseId = backStackEntry.arguments?.getString("courseId")?.toIntOrNull()
-            if (courseId != null) {
-                AddReviewScreen(
-                    courseId = courseId,
-                    onReviewAdded = {
-                        navController.popBackStack()
-                    },
-                    onCancel = {
-                        navController.popBackStack()
-                    }
+                    onNavigateBack = { navController.popBackStack() }
+                    // Note: Add review is now handled inside CourseDetailScreen via dialog
                 )
             }
         }
@@ -160,11 +143,11 @@ fun FacultyMainScreen(
                     )
                     Text(
                         text = "No faculty selected",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Please select a faculty first",
+                        text = "Please complete your profile first",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -173,6 +156,7 @@ fun FacultyMainScreen(
             return@Scaffold
         }
 
+        // Show courses list based on state
         when (courseListState) {
             is CourseListState.Loading -> {
                 Box(
@@ -191,8 +175,40 @@ fun FacultyMainScreen(
                 }
             }
 
+            is CourseListState.Error -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.padding(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.School,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Text(
+                            text = courseListState.message,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Button(onClick = onRefresh) {
+                            Text("Retry")
+                        }
+                    }
+                }
+            }
+
             is CourseListState.Success -> {
-                if (courseListState.courses.isEmpty()) {
+                val courses = courseListState.courses
+
+                if (courses.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -211,11 +227,11 @@ fun FacultyMainScreen(
                             )
                             Text(
                                 text = "No courses available",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Courses will be available soon",
+                                text = "Check back later for course listings",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -225,62 +241,93 @@ fun FacultyMainScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(paddingValues)
-                            .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        contentPadding = PaddingValues(vertical = 16.dp)
+                            .padding(paddingValues),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        item {
-                            Text(
-                                text = "Your Courses (${courseListState.courses.size})",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-                        }
-
-                        items(courseListState.courses) { courseWithRatings ->
+                        items(courses) { courseWithRatings ->
                             CourseCard(
-                                courseName = courseWithRatings.course.name,
-                                teacherName = courseWithRatings.teacherName,
-                                avgClarity = courseWithRatings.avgClarity,
-                                avgFeasibility = courseWithRatings.avgFeasibility,
-                                avgAvailability = courseWithRatings.avgAvailability,
+                                courseWithRatings = courseWithRatings,
                                 onClick = { onCourseClick(courseWithRatings.course.id) }
                             )
                         }
                     }
                 }
             }
+        }
+    }
+}
 
-            is CourseListState.Error -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Text(
-                            text = "Error loading courses",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Text(
-                            text = courseListState.message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Button(onClick = onRefresh) {
-                            Text("Retry")
-                        }
-                    }
-                }
+@Composable
+fun CourseCard(
+    courseWithRatings: CourseWithRatings,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Course name
+            Text(
+                text = courseWithRatings.course.name,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            // Teacher
+            Text(
+                text = "Prof. ${courseWithRatings.teacherName}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            HorizontalDivider()
+
+            // Ratings summary
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                RatingSummary(
+                    label = "Clarity",
+                    rating = courseWithRatings.avgClarity
+                )
+                RatingSummary(
+                    label = "Feasibility",
+                    rating = courseWithRatings.avgFeasibility
+                )
+                RatingSummary(
+                    label = "Availability",
+                    rating = courseWithRatings.avgAvailability
+                )
             }
         }
+    }
+}
+
+@Composable
+fun RatingSummary(label: String, rating: Double) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = if (rating > 0) String.format("%.1f", rating) else "N/A",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = if (rating > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }

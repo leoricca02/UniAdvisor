@@ -132,5 +132,15 @@ fun UniAdvisorApp() {
         composable("dashboard") {
             DashboardScreen()
         }
+
+        // 🔹 Other screens
+        composable("course_detail/{courseId}") { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId")?.toIntOrNull() ?: 0
+            CourseDetailScreen(
+                courseId = courseId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
     }
+
 }
