@@ -1,29 +1,54 @@
 package com.riccaturrini.uniadvisor.network
 
+import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import com.riccaturrini.uniadvisor.data.*
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.tasks.await
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.*
+import java.util.concurrent.TimeUnit
 
 class AuthInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        val token = runBlocking {
-            Firebase.auth.currentUser?.getIdToken(false)?.await()?.token
+        val originalRequest = chain.request()
+        android.util.Log.d("AuthInterceptor", "🌐 Intercepting: ${originalRequest.method} ${originalRequest.url}")
+
+        val token = try {
+            val currentUser = Firebase.auth.currentUser
+            android.util.Log.d("AuthInterceptor", "👤 Current user: ${currentUser?.uid ?: "NULL"}")
+            android.util.Log.d("AuthInterceptor", "📧 User email: ${currentUser?.email ?: "NULL"}")
+
+            if (currentUser != null) {
+                val tokenTask = currentUser.getIdToken(false)
+                val tokenResult = Tasks.await(tokenTask, 10, TimeUnit.SECONDS)
+                val tokenString = tokenResult.token
+                android.util.Log.d("AuthInterceptor", "✅ Token obtained (length: ${tokenString?.length ?: 0})")
+                android.util.Log.d("AuthInterceptor", "🔑 Token (first 50): ${tokenString?.take(50)}")
+                tokenString
+            } else {
+                android.util.Log.e("AuthInterceptor", "❌ Current user is NULL!")
+                null
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("AuthInterceptor", "💥 Error getting token: ${e.message}", e)
+            null
         }
+
         val request = chain.request().newBuilder()
             .apply {
                 if (token != null) {
                     addHeader("Authorization", "Bearer $token")
+                    android.util.Log.d("AuthInterceptor", "✅ Authorization header added")
+                } else {
+                    android.util.Log.e("AuthInterceptor", "⚠️ No token - request sent without auth!")
                 }
             }
             .build()
+
         return chain.proceed(request)
     }
 }
@@ -88,8 +113,17 @@ interface ApiService {
     @GET("notes/usr/my-notes")
     suspend fun getMyNotes(): retrofit2.Response<List<Note>>
 
+    @POST("notes/")
+    suspend fun uploadNote(@Body note: NoteCreate): retrofit2.Response<Note>
+
+    @DELETE("notes/{note_id}")
+    suspend fun deleteNote(@Path("note_id") noteId: Int): retrofit2.Response<Unit>
+
     @GET("notes/usr/my-reviews")
     suspend fun getMyNoteRatings(): retrofit2.Response<List<NoteRating>>
+
+    @GET("notes/{course_id}")
+    suspend fun getNotesByCourse(@Path("course_id") courseId: Int): retrofit2.Response<List<Note>>
 }
 
 object ApiClient {
@@ -97,6 +131,9 @@ object ApiClient {
 
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(AuthInterceptor())
+        .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+        .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+        .writeTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
         .build()
 
     val instance: ApiService by lazy {

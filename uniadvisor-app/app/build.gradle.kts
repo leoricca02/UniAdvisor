@@ -63,6 +63,9 @@ dependencies {
     implementation("androidx.compose.ui:ui-text-google-fonts")
     implementation("androidx.lifecycle:lifecycle-process:2.8.0")
     implementation("com.google.accompanist:accompanist-swiperefresh:0.32.0")
+    implementation("com.google.firebase:firebase-storage-ktx:20.3.0")
+    implementation("com.google.accompanist:accompanist-swiperefresh:0.32.0")
+    implementation("com.google.android.gms:play-services-tasks:18.1.0")
 
     // Test dependencies
     testImplementation(libs.junit)

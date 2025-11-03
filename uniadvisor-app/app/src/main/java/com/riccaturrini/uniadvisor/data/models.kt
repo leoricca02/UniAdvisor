@@ -75,3 +75,10 @@ data class NoteRating(
     val comment: String?,
     val created_at: String
 )
+
+// For creating a note
+data class NoteCreate(
+    val course_id: Int,
+    val file_id: String, // Firebase Storage download URL
+    val description: String?
+)
