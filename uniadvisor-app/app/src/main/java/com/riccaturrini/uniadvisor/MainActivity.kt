@@ -34,7 +34,7 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         // Auto-logout when app goes to background
-        Firebase.auth.signOut()
+        // Firebase.auth.signOut()  // Uncomment this line to enable auto-logout
     }
 }
 

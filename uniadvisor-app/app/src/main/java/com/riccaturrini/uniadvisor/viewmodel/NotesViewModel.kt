@@ -4,19 +4,17 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.android.gms.tasks.Tasks
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.FirebaseStorage
 import com.riccaturrini.uniadvisor.data.Note
 import com.riccaturrini.uniadvisor.data.NoteCreate
 import com.riccaturrini.uniadvisor.data.NoteRating
 import com.riccaturrini.uniadvisor.network.ApiClient
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.withContext
 
 sealed class NotesUiState {
     object Loading : NotesUiState()
@@ -75,7 +73,6 @@ class NotesViewModel : ViewModel() {
                         }
                     }
                     response.code() == 404 -> {
-                        // No notes yet - not an error
                         Log.d("NotesViewModel", "ℹ️ No notes found (404)")
                         _notesState.value = NotesUiState.Empty
                     }
@@ -94,7 +91,12 @@ class NotesViewModel : ViewModel() {
     }
 
     /**
-     * Upload a note file to Firebase Storage and create note in backend
+     * Upload a note file to Firebase Storage and create note in backend.
+     *
+     * VERSIONE FINALE: Non controlla Firebase.auth.currentUser direttamente,
+     * ma lascia che l'AuthInterceptor gestisca l'autenticazione.
+     *
+     * L'AuthInterceptor si occuperà di ottenere il token e aggiungerlo alla richiesta.
      */
     fun uploadNote(
         fileUri: Uri,
@@ -102,12 +104,10 @@ class NotesViewModel : ViewModel() {
         description: String,
         fileName: String
     ) {
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+        viewModelScope.launch {
             try {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    _uploadState.value = UploadNoteState.Uploading(0)
-                }
                 Log.d("NotesViewModel", "📤 Starting upload for: $fileName")
+                _uploadState.value = UploadNoteState.Uploading(0)
 
                 // Create storage reference
                 val timestamp = System.currentTimeMillis()
@@ -116,25 +116,34 @@ class NotesViewModel : ViewModel() {
 
                 Log.d("NotesViewModel", "📁 Storage path: $storagePath")
 
-                // Upload file with progress tracking
-                val uploadTask = storageRef.putFile(fileUri)
+                // Upload file to Firebase Storage
+                val downloadUrl = withContext(Dispatchers.IO) {
+                    val uploadTask = storageRef.putFile(fileUri)
 
-                uploadTask.addOnProgressListener { taskSnapshot ->
-                    val progress = (100.0 * taskSnapshot.bytesTransferred / taskSnapshot.totalByteCount).toInt()
-                    viewModelScope.launch(kotlinx.coroutines.Dispatchers.Main) {
-                        _uploadState.value = UploadNoteState.Uploading(progress)
+                    // Track upload progress
+                    uploadTask.addOnProgressListener { taskSnapshot ->
+                        val progress = (100.0 * taskSnapshot.bytesTransferred / taskSnapshot.totalByteCount).toInt()
+                        viewModelScope.launch {
+                            _uploadState.value = UploadNoteState.Uploading(progress)
+                            Log.d("NotesViewModel", "📊 Upload progress: $progress%")
+                        }
                     }
-                    Log.d("NotesViewModel", "📊 Upload progress: $progress%")
-                }.await()
 
-                Log.d("NotesViewModel", "✅ File uploaded to Firebase Storage")
+                    // Wait for upload to complete
+                    uploadTask.await()
+                    Log.d("NotesViewModel", "✅ File uploaded to Firebase Storage")
 
-                // Get download URL
-                val downloadUrl = storageRef.downloadUrl.await().toString()
-                Log.d("NotesViewModel", "🔗 Download URL: $downloadUrl")
+                    // Get download URL
+                    val url = storageRef.downloadUrl.await().toString()
+                    Log.d("NotesViewModel", "🔗 Download URL: $url")
+                    url
+                }
 
-                // Create note in backend
-                // AuthInterceptor will automatically handle authentication
+                // IMPORTANTE: Piccolo delay per assicurare che Firebase Storage sia sincronizzato
+                // Questo aiuta a stabilizzare l'SDK Firebase tra Storage e Auth
+                kotlinx.coroutines.delay(1000)
+
+                // Create note object for backend
                 val noteCreate = NoteCreate(
                     course_id = courseId,
                     file_id = downloadUrl,
@@ -143,45 +152,49 @@ class NotesViewModel : ViewModel() {
 
                 Log.d("NotesViewModel", "📤 Sending note to backend...")
 
-                // Add a small delay to ensure Firebase SDK is stable after storage upload
-                kotlinx.coroutines.delay(500)
+                // Call backend API - AuthInterceptor will handle authentication
+                val response = withContext(Dispatchers.IO) {
+                    apiService.uploadNote(noteCreate)
+                }
 
-                val response = apiService.uploadNote(noteCreate)
-
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    if (response.isSuccessful) {
-                        Log.d("NotesViewModel", "✅ Note created in backend")
-                        _uploadState.value = UploadNoteState.Success
-                        // Reload notes
-                        loadMyNotes()
-                    } else {
-                        val errorMsg = when (response.code()) {
-                            401 -> "Not authenticated. Please logout and login again."
-                            403 -> "You don't have permission to upload notes for this course."
-                            404 -> "Course not found."
-                            else -> "Failed to create note: ${response.code()}"
-                        }
-                        Log.e("NotesViewModel", "❌ $errorMsg (code: ${response.code()})")
-
-                        // Delete uploaded file since backend failed
-                        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                            try {
-                                storageRef.delete().await()
-                                Log.d("NotesViewModel", "🗑️ Deleted uploaded file after backend failure")
-                            } catch (e: Exception) {
-                                Log.e("NotesViewModel", "Failed to delete file: ${e.message}")
-                            }
-                        }
-                        _uploadState.value = UploadNoteState.Error(errorMsg)
+                // Handle response
+                if (response.isSuccessful) {
+                    Log.d("NotesViewModel", "✅ Note created in backend")
+                    _uploadState.value = UploadNoteState.Success
+                    // Reload notes list
+                    loadMyNotes()
+                } else {
+                    val errorMsg = when (response.code()) {
+                        401 -> "Not authenticated. Please logout and login again."
+                        403 -> "You don't have permission to upload notes for this course."
+                        404 -> "Course not found."
+                        else -> "Failed to create note: ${response.code()}"
                     }
+                    Log.e("NotesViewModel", "❌ Backend error: $errorMsg (code: ${response.code()})")
+
+                    // Delete uploaded file since backend failed
+                    withContext(Dispatchers.IO) {
+                        try {
+                            storageRef.delete().await()
+                            Log.d("NotesViewModel", "🗑️ Deleted uploaded file after backend failure")
+                        } catch (e: Exception) {
+                            Log.e("NotesViewModel", "Failed to delete file: ${e.message}")
+                        }
+                    }
+
+                    _uploadState.value = UploadNoteState.Error(errorMsg)
                 }
 
             } catch (e: Exception) {
-                val errorMsg = e.message ?: "Upload failed"
-                Log.e("NotesViewModel", "💥 Upload error: $errorMsg", e)
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    _uploadState.value = UploadNoteState.Error(errorMsg)
+                val errorMsg = when {
+                    e.message?.contains("User does not have permission") == true ->
+                        "Storage permission denied. Please check your authentication."
+                    e.message?.contains("Object does not exist") == true ->
+                        "Upload failed. File not found."
+                    else -> e.message ?: "Upload failed"
                 }
+                Log.e("NotesViewModel", "💥 Upload error: $errorMsg", e)
+                _uploadState.value = UploadNoteState.Error(errorMsg)
             }
         }
     }
