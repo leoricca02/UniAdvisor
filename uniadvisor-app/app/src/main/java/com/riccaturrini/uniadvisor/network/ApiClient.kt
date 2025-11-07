@@ -7,10 +7,6 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.*
 import java.util.concurrent.TimeUnit
 
-/**
- * ApiClient consolidato con configurazione corretta.
- * Usa l'AuthInterceptor corretto che gestisce propriamente il threading con Firebase.
- */
 interface ApiService {
     // User endpoints
     @GET("users/me")
@@ -77,11 +73,33 @@ interface ApiService {
     @DELETE("notes/{note_id}")
     suspend fun deleteNote(@Path("note_id") noteId: Int): retrofit2.Response<Unit>
 
+    @GET("notes/{course_id}")
+    suspend fun getNotesByCourse(@Path("course_id") courseId: Int): retrofit2.Response<List<Note>>
+
+    // ✅ NEW: Note rating endpoints
+    @GET("notes/{course_id}/notes-sorted")
+    suspend fun getNotesWithRatings(
+        @Path("course_id") courseId: Int,
+        @Query("order") order: String = "desc"
+    ): retrofit2.Response<List<NoteWithRating>>
+
+    @POST("notes/ratings")
+    suspend fun addNoteRating(@Body rating: NoteRatingCreate): retrofit2.Response<NoteRating>
+
+    @PUT("notes/ratings/{rating_id}")
+    suspend fun updateNoteRating(
+        @Path("rating_id") ratingId: Int,
+        @Body rating: NoteRatingUpdate
+    ): retrofit2.Response<NoteRating>
+
+    @DELETE("notes/ratings/{rating_id}")
+    suspend fun deleteNoteRating(@Path("rating_id") ratingId: Int): retrofit2.Response<Unit>
+
     @GET("notes/usr/my-reviews")
     suspend fun getMyNoteRatings(): retrofit2.Response<List<NoteRating>>
 
-    @GET("notes/{course_id}")
-    suspend fun getNotesByCourse(@Path("course_id") courseId: Int): retrofit2.Response<List<Note>>
+    @GET("notes/notes/{note_id}/average-rating")
+    suspend fun getNoteAverageRating(@Path("note_id") noteId: Int): retrofit2.Response<Map<String, Any>>
 }
 
 /**

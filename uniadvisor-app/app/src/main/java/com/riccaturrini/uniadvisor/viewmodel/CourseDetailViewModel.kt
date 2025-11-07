@@ -3,9 +3,7 @@ package com.riccaturrini.uniadvisor.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.riccaturrini.uniadvisor.data.Course
-import com.riccaturrini.uniadvisor.data.Review
-import com.riccaturrini.uniadvisor.data.ReviewCreate
+import com.riccaturrini.uniadvisor.data.*
 import com.riccaturrini.uniadvisor.network.ApiClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,7 +15,8 @@ data class CourseDetailData(
     val avgClarity: Double,
     val avgFeasibility: Double,
     val avgAvailability: Double,
-    val reviews: List<Review>
+    val reviews: List<Review>,
+    val notes: List<NoteWithRating> // ✅ UPDATED: Now using NoteWithRating
 )
 
 sealed class CourseDetailState {
@@ -33,6 +32,14 @@ sealed class AddReviewState {
     data class Error(val message: String) : AddReviewState()
 }
 
+// ✅ NEW: State for note rating
+sealed class NoteRatingState {
+    object Idle : NoteRatingState()
+    object Loading : NoteRatingState()
+    object Success : NoteRatingState()
+    data class Error(val message: String) : NoteRatingState()
+}
+
 class CourseDetailViewModel : ViewModel() {
 
     private val apiService = ApiClient.instance
@@ -43,8 +50,12 @@ class CourseDetailViewModel : ViewModel() {
     private val _addReviewState = MutableStateFlow<AddReviewState>(AddReviewState.Idle)
     val addReviewState: StateFlow<AddReviewState> = _addReviewState
 
+    // ✅ NEW: Note rating state
+    private val _noteRatingState = MutableStateFlow<NoteRatingState>(NoteRatingState.Idle)
+    val noteRatingState: StateFlow<NoteRatingState> = _noteRatingState
+
     /**
-     * Load complete course details including teacher, ratings, and reviews
+     * Load complete course details including teacher, ratings, reviews, and notes with ratings
      */
     fun loadCourseDetail(courseId: Int) {
         viewModelScope.launch {
@@ -100,6 +111,20 @@ class CourseDetailViewModel : ViewModel() {
                     emptyList()
                 }
 
+                // ✅ UPDATED: Get notes WITH ratings, sorted by rating (best first)
+                val notesResponse = apiService.getNotesWithRatings(courseId, order = "desc")
+                val notes = if (notesResponse.isSuccessful && notesResponse.body() != null) {
+                    notesResponse.body()!!.also {
+                        Log.d("CourseDetailVM", "✅ Loaded ${it.size} notes with ratings")
+                        it.forEach { note ->
+                            Log.d("CourseDetailVM", "   Note ${note.id}: avg rating = ${note.average_rating}")
+                        }
+                    }
+                } else {
+                    Log.w("CourseDetailVM", "⚠️ No notes found (${notesResponse.code()})")
+                    emptyList()
+                }
+
                 _courseDetailState.value = CourseDetailState.Success(
                     CourseDetailData(
                         course = course,
@@ -107,7 +132,8 @@ class CourseDetailViewModel : ViewModel() {
                         avgClarity = avgClarity,
                         avgFeasibility = avgFeasibility,
                         avgAvailability = avgAvailability,
-                        reviews = reviews
+                        reviews = reviews,
+                        notes = notes // ✅ Now with ratings!
                     )
                 )
 
@@ -150,7 +176,48 @@ class CourseDetailViewModel : ViewModel() {
         }
     }
 
+    // ✅ NEW: Add rating to a note
+    fun addNoteRating(courseId: Int, noteId: Int, rating: Int, comment: String? = null) {
+        viewModelScope.launch {
+            _noteRatingState.value = NoteRatingState.Loading
+            try {
+                Log.d("CourseDetailVM", "⭐ Adding rating $rating to note $noteId")
+
+                val ratingCreate = NoteRatingCreate(
+                    note_id = noteId,
+                    rating = rating,
+                    comment = comment
+                )
+
+                val response = apiService.addNoteRating(ratingCreate)
+
+                if (response.isSuccessful) {
+                    Log.d("CourseDetailVM", "✅ Note rating added successfully")
+                    _noteRatingState.value = NoteRatingState.Success
+                    // Reload course details to show updated ratings
+                    loadCourseDetail(courseId)
+                } else {
+                    val errorMsg = when (response.code()) {
+                        403 -> "You cannot rate your own note"
+                        400 -> "You have already rated this note"
+                        else -> "Failed to add rating: ${response.code()}"
+                    }
+                    Log.e("CourseDetailVM", "❌ $errorMsg")
+                    _noteRatingState.value = NoteRatingState.Error(errorMsg)
+                }
+            } catch (e: Exception) {
+                val errorMsg = e.message ?: "Connection error"
+                Log.e("CourseDetailVM", "💥 Error adding note rating: $errorMsg", e)
+                _noteRatingState.value = NoteRatingState.Error(errorMsg)
+            }
+        }
+    }
+
     fun resetAddReviewState() {
         _addReviewState.value = AddReviewState.Idle
+    }
+
+    fun resetNoteRatingState() {
+        _noteRatingState.value = NoteRatingState.Idle
     }
 }

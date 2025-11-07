@@ -33,6 +33,12 @@ fun FacultyScreen(
     var facultyName by remember { mutableStateOf<String?>(null) }
     var hasLoaded by remember { mutableStateOf(false) }
 
+    // ✅ FIXED: Force reload user data when screen is first displayed
+    LaunchedEffect(Unit) {
+        Log.d("FacultyScreen", "🔄 Screen opened - Reloading user profile")
+        authViewModel.checkUserProfile()
+    }
+
     // Load courses when faculty_id is available
     LaunchedEffect(currentUserData) {
         Log.d("FacultyScreen", "LaunchedEffect triggered - currentUserData: $currentUserData")
@@ -42,17 +48,17 @@ fun FacultyScreen(
 
             userData.faculty_id?.let { fId ->
                 if (!hasLoaded || facultyId != fId) {
-                    Log.d("FacultyScreen", "Loading courses for faculty: $fId")
+                    Log.d("FacultyScreen", "✅ Loading courses for faculty: $fId")
                     facultyId = fId
-                    facultyName = "Your Faculty"
+                    facultyName = "Your Faculty" // Could fetch actual name from API if needed
                     courseViewModel.loadCoursesByFaculty(fId)
                     hasLoaded = true
                 }
             } ?: run {
-                Log.e("FacultyScreen", "User has no faculty_id!")
+                Log.e("FacultyScreen", "❌ User has no faculty_id!")
             }
         } ?: run {
-            Log.e("FacultyScreen", "currentUserData is null!")
+            Log.e("FacultyScreen", "❌ currentUserData is null!")
         }
     }
 
@@ -67,21 +73,23 @@ fun FacultyScreen(
                 },
                 onRefresh = {
                     facultyId?.let { fId ->
-                        Log.d("FacultyScreen", "Refreshing courses for faculty: $fId")
+                        Log.d("FacultyScreen", "🔄 Refreshing courses for faculty: $fId")
                         courseViewModel.loadCoursesByFaculty(fId)
+                    } ?: run {
+                        // ✅ FIXED: If no faculty_id, try reloading user profile
+                        Log.d("FacultyScreen", "🔄 No faculty_id, reloading user profile")
+                        authViewModel.checkUserProfile()
                     }
                 }
             )
         }
 
-        // ✅ FIXED: Updated to use new CourseDetailScreen signature
         composable("course_detail/{courseId}") { backStackEntry ->
             val courseId = backStackEntry.arguments?.getString("courseId")?.toIntOrNull()
             if (courseId != null) {
                 CourseDetailScreen(
                     courseId = courseId,
                     onNavigateBack = { navController.popBackStack() }
-                    // Note: Add review is now handled inside CourseDetailScreen via dialog
                 )
             }
         }
@@ -133,7 +141,8 @@ fun FacultyMainScreen(
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.padding(32.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.School,
@@ -147,10 +156,18 @@ fun FacultyMainScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Please complete your profile first",
+                        text = "Please select a faculty in your profile first",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
+                    // ✅ ADDED: Refresh button to try reloading
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(onClick = onRefresh) {
+                        Icon(Icons.Default.Refresh, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Reload")
+                    }
                 }
             }
             return@Scaffold
@@ -170,44 +187,17 @@ fun FacultyMainScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         CircularProgressIndicator()
-                        Text("Loading courses...")
-                    }
-                }
-            }
-
-            is CourseListState.Error -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.padding(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.School,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.error
-                        )
                         Text(
-                            text = courseListState.message,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.error
+                            text = "Loading courses...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Button(onClick = onRefresh) {
-                            Text("Retry")
-                        }
                     }
                 }
             }
 
             is CourseListState.Success -> {
                 val courses = courseListState.courses
-
                 if (courses.isEmpty()) {
                     Box(
                         modifier = Modifier
@@ -254,80 +244,45 @@ fun FacultyMainScreen(
                     }
                 }
             }
-        }
-    }
-}
 
-@Composable
-fun CourseCard(
-    courseWithRatings: CourseWithRatings,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onClick,
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Course name
-            Text(
-                text = courseWithRatings.course.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-
-            // Teacher
-            Text(
-                text = "Prof. ${courseWithRatings.teacherName}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            HorizontalDivider()
-
-            // Ratings summary
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                RatingSummary(
-                    label = "Clarity",
-                    rating = courseWithRatings.avgClarity
-                )
-                RatingSummary(
-                    label = "Feasibility",
-                    rating = courseWithRatings.avgFeasibility
-                )
-                RatingSummary(
-                    label = "Availability",
-                    rating = courseWithRatings.avgAvailability
-                )
+            is CourseListState.Error -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.padding(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Text(
+                            text = "Error loading courses",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Text(
+                            text = courseListState.message,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Button(onClick = onRefresh) {
+                            Icon(Icons.Default.Refresh, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Retry")
+                        }
+                    }
+                }
             }
         }
-    }
-}
-
-@Composable
-fun RatingSummary(label: String, rating: Double) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = if (rating > 0) String.format("%.1f", rating) else "N/A",
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
-            color = if (rating > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }

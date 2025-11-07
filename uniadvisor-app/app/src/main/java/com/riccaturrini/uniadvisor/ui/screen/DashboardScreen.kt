@@ -12,11 +12,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.riccaturrini.uniadvisor.ui.components.UniAdvisorBottomBar
 import com.riccaturrini.uniadvisor.viewmodel.AuthViewModel
-import com.riccaturrini.uniadvisor.viewmodel.MyReviewsViewModel
 
 @Composable
 fun DashboardScreen(
-    authViewModel: AuthViewModel = viewModel()
+    authViewModel: AuthViewModel = viewModel(),
+    onLogout: () -> Unit = {} // ✅ ADDED: Logout callback from MainActivity
 ) {
     val navController = rememberNavController()
 
@@ -46,6 +46,7 @@ fun DashboardScreen(
         DashboardNavGraph(
             navController = navController,
             authViewModel = authViewModel,
+            onLogout = onLogout, // ✅ UPDATED: Pass logout callback
             modifier = Modifier.padding(innerPadding)
         )
     }
@@ -56,6 +57,7 @@ fun DashboardScreen(
 fun DashboardNavGraph(
     navController: NavHostController,
     authViewModel: AuthViewModel,
+    onLogout: () -> Unit, // ✅ ADDED: Logout callback
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -64,7 +66,18 @@ fun DashboardNavGraph(
         modifier = modifier
     ) {
         composable("home") {
-            HomeScreen(authViewModel = authViewModel)
+            HomeScreen(
+                authViewModel = authViewModel,
+                onNavigate = { route ->
+                    navController.navigate(route) {
+                        popUpTo("home") {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            )
         }
         composable("faculty") {
             FacultyScreen(authViewModel = authViewModel)
@@ -76,7 +89,11 @@ fun DashboardNavGraph(
             NotesScreen(authViewModel = authViewModel)
         }
         composable("profile") {
-            ProfileScreen(authViewModel = authViewModel)
+            ProfileScreen(
+                authViewModel = authViewModel,
+                onLogout = onLogout,
+                onAccountDeleted = onLogout
+            )
         }
     }
 }

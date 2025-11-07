@@ -66,6 +66,17 @@ data class Note(
     val created_at: String
 )
 
+// ✅ NEW: Note con rating medio
+data class NoteWithRating(
+    val id: Int,
+    val course_id: Int,
+    val student_id: Int,
+    val file_id: String,
+    val description: String?,
+    val created_at: String,
+    val average_rating: Double? // Può essere null se nessuno ha votato
+)
+
 // Per le valutazioni delle note
 data class NoteRating(
     val id: Int,
@@ -74,6 +85,19 @@ data class NoteRating(
     val rating: Int,
     val comment: String?,
     val created_at: String
+)
+
+// ✅ NEW: Per creare un rating di una nota
+data class NoteRatingCreate(
+    val note_id: Int,
+    val rating: Int,  // 1-5
+    val comment: String?
+)
+
+// ✅ NEW: Per aggiornare un rating
+data class NoteRatingUpdate(
+    val rating: Int,
+    val comment: String?
 )
 
 // For creating a note

@@ -130,7 +130,17 @@ fun UniAdvisorApp() {
 
         // 🔹 Main dashboard with BottomBar
         composable("dashboard") {
-            DashboardScreen()
+            DashboardScreen(
+                authViewModel = authViewModel,
+                onLogout = {
+                    // Perform logout
+                    authViewModel.signOut()
+                    // Navigate to login and clear backstack
+                    navController.navigate("login") {
+                        popUpTo("splash") { inclusive = true }
+                    }
+                }
+            )
         }
 
         // 🔹 Other screens

@@ -35,10 +35,10 @@ fun UniAdvisorBottomBar(
             icon = {
                 Icon(
                     imageVector = Icons.Filled.School,
-                    contentDescription = "Accademico"
+                    contentDescription = "Your Faculty"
                 )
             },
-            label = { Text("Accademico") },
+            label = { Text("Your Faculty") },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = activeColor,
                 selectedTextColor = activeColor,
@@ -54,10 +54,10 @@ fun UniAdvisorBottomBar(
             icon = {
                 Icon(
                     imageVector = Icons.Filled.Star,
-                    contentDescription = "Valutazioni"
+                    contentDescription = "Reviews"
                 )
             },
-            label = { Text("Valutazioni") },
+            label = { Text("Reviews") },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = activeColor,
                 selectedTextColor = activeColor,
@@ -93,10 +93,10 @@ fun UniAdvisorBottomBar(
             icon = {
                 Icon(
                     imageVector = Icons.Filled.Description,
-                    contentDescription = "Note"
+                    contentDescription = "Notes"
                 )
             },
-            label = { Text("Note") },
+            label = { Text("Notes") },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = activeColor,
                 selectedTextColor = activeColor,
@@ -112,10 +112,10 @@ fun UniAdvisorBottomBar(
             icon = {
                 Icon(
                     imageVector = Icons.Filled.Person,
-                    contentDescription = "Profilo"
+                    contentDescription = "Profile"
                 )
             },
-            label = { Text("Profilo") },
+            label = { Text("Profile") },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = activeColor,
                 selectedTextColor = activeColor,

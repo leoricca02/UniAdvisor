@@ -24,7 +24,8 @@ import java.time.LocalTime
 @Composable
 fun HomeScreen(
     authViewModel: AuthViewModel,
-    profileViewModel: ProfileViewModel = viewModel()
+    profileViewModel: ProfileViewModel = viewModel(),
+    onNavigate: (String) -> Unit = {}
 ) {
     val currentUser by authViewModel.currentUserData.collectAsState()
     val profileState by profileViewModel.profileState.collectAsState()
@@ -128,7 +129,7 @@ fun HomeScreen(
                             modifier = Modifier.padding(top = 8.dp)
                         )
 
-                        QuickActionsGrid()
+                        QuickActionsGrid(onNavigate = onNavigate)
 
                         // Bottom spacing
                         Spacer(modifier = Modifier.height(16.dp))
@@ -327,7 +328,7 @@ fun FacultyInfoCard(facultyName: String) {
 }
 
 @Composable
-fun QuickActionsGrid() {
+fun QuickActionsGrid(onNavigate: (String) -> Unit) {
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -339,13 +340,15 @@ fun QuickActionsGrid() {
                 icon = Icons.Default.School,
                 title = "Courses",
                 description = "Browse courses",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = { onNavigate("faculty") }
             )
             QuickActionCard(
                 icon = Icons.Default.Description,
                 title = "Notes",
                 description = "Your notes",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = { onNavigate("notes") }
             )
         }
         Row(
@@ -356,13 +359,15 @@ fun QuickActionsGrid() {
                 icon = Icons.Default.RateReview,
                 title = "Reviews",
                 description = "Your reviews",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = { onNavigate("reviews") }
             )
             QuickActionCard(
                 icon = Icons.Default.Person,
                 title = "Profile",
                 description = "View profile",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = { onNavigate("profile") }
             )
         }
     }
@@ -373,14 +378,16 @@ fun QuickActionCard(
     icon: ImageVector,
     title: String,
     description: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
 ) {
     Card(
         modifier = modifier,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        )
+        ),
+        onClick = onClick
     ) {
         Column(
             modifier = Modifier
