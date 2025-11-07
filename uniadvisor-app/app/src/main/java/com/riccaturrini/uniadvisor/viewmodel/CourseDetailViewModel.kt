@@ -59,9 +59,10 @@ class CourseDetailViewModel : ViewModel() {
      */
     fun loadCourseDetail(courseId: Int) {
         viewModelScope.launch {
+            Log.d("CourseDetailVM", "📚 loadCourseDetail called for ID: $courseId")
             _courseDetailState.value = CourseDetailState.Loading
             try {
-                Log.d("CourseDetailVM", "📚 Loading course details for ID: $courseId")
+                Log.d("CourseDetailVM", "🔄 Fetching course details...")
 
                 // Get course details
                 val courseResponse = apiService.getCourseDetail(courseId)
@@ -195,7 +196,7 @@ class CourseDetailViewModel : ViewModel() {
                     Log.d("CourseDetailVM", "✅ Note rating added successfully")
                     _noteRatingState.value = NoteRatingState.Success
                     // Reload course details to show updated ratings
-                    loadCourseDetail(courseId)
+                    // loadCourseDetail(courseId)
                 } else {
                     val errorMsg = when (response.code()) {
                         403 -> "You cannot rate your own note"

@@ -2,6 +2,7 @@ package com.riccaturrini.uniadvisor.ui.screen
 
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -48,11 +49,23 @@ fun CourseDetailScreen(
         }
     }
 
-    // ✅ NEW: Handle note rating added successfully
     LaunchedEffect(noteRatingState) {
+        Log.d("CourseDetailScreen", "🔔 noteRatingState changed: ${noteRatingState::class.simpleName}")
+
         if (noteRatingState is NoteRatingState.Success) {
+            Log.d("CourseDetailScreen", "✅ Note rating success - will reload after delay")
             showRateNoteDialog = false
             selectedNoteId = null
+
+            // ✅ Aspetta un attimo per permettere al backend di aggiornare
+            kotlinx.coroutines.delay(1000) // 1 secondo di delay
+
+            // ✅ Ricarica i dati del corso
+            Log.d("CourseDetailScreen", "🔄 Calling loadCourseDetail for course $courseId")
+            viewModel.loadCourseDetail(courseId)
+
+            // ✅ Resetta lo stato
+            Log.d("CourseDetailScreen", "🔄 Resetting note rating state")
             viewModel.resetNoteRatingState()
         }
     }

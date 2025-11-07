@@ -25,6 +25,8 @@ fun FacultyScreen(
     authViewModel: AuthViewModel,
     courseViewModel: CourseViewModel = viewModel()
 ) {
+
+    Log.d("FacultyScreen", "🚀 FacultyScreen COMPOSABLE STARTED")
     val navController = rememberNavController()
     val courseListState by courseViewModel.courseListState.collectAsState()
     val currentUserData by authViewModel.currentUserData.collectAsState()
@@ -33,10 +35,19 @@ fun FacultyScreen(
     var facultyName by remember { mutableStateOf<String?>(null) }
     var hasLoaded by remember { mutableStateOf(false) }
 
-    // ✅ FIXED: Force reload user data when screen is first displayed
-    LaunchedEffect(Unit) {
-        Log.d("FacultyScreen", "🔄 Screen opened - Reloading user profile")
-        authViewModel.checkUserProfile()
+    LaunchedEffect(courseListState) {
+        Log.d("FacultyScreen", "🔄 courseListState CHANGED to: ${courseListState::class.simpleName}")
+        when (courseListState) {
+            is CourseListState.Success -> {
+                Log.d("FacultyScreen", "✅ SUCCESS STATE with ${(courseListState as CourseListState.Success).courses.size} courses")
+            }
+            is CourseListState.Error -> {
+                Log.d("FacultyScreen", "❌ ERROR STATE: ${(courseListState as CourseListState.Error).message}")
+            }
+            is CourseListState.Loading -> {
+                Log.d("FacultyScreen", "⏳ LOADING STATE")
+            }
+        }
     }
 
     // Load courses when faculty_id is available
@@ -105,6 +116,10 @@ fun FacultyMainScreen(
     onCourseClick: (Int) -> Unit,
     onRefresh: () -> Unit
 ) {
+    Log.d("FacultyMainScreen", "🎨 Composing FacultyMainScreen")
+    Log.d("FacultyMainScreen", "📊 State: ${courseListState::class.simpleName}")
+    Log.d("FacultyMainScreen", "🏫 Faculty ID: $facultyId")
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -133,6 +148,7 @@ fun FacultyMainScreen(
     ) { paddingValues ->
         // Show message if no faculty is selected
         if (facultyId == null) {
+            Log.d("FacultyMainScreen", "⚠️ No faculty ID - showing selection prompt")
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -161,7 +177,6 @@ fun FacultyMainScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
-                    // ✅ ADDED: Refresh button to try reloading
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(onClick = onRefresh) {
                         Icon(Icons.Default.Refresh, contentDescription = null)
@@ -176,6 +191,7 @@ fun FacultyMainScreen(
         // Show courses list based on state
         when (courseListState) {
             is CourseListState.Loading -> {
+                Log.d("FacultyMainScreen", "⏳ Showing loading state")
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -198,7 +214,10 @@ fun FacultyMainScreen(
 
             is CourseListState.Success -> {
                 val courses = courseListState.courses
+                Log.d("FacultyMainScreen", "✅ Success state with ${courses.size} courses")
+
                 if (courses.isEmpty()) {
+                    Log.d("FacultyMainScreen", "📭 No courses to display")
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -228,6 +247,8 @@ fun FacultyMainScreen(
                         }
                     }
                 } else {
+                    Log.d("FacultyMainScreen", "📚 About to render LazyColumn with ${courses.size} courses")
+
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -236,16 +257,28 @@ fun FacultyMainScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(courses) { courseWithRatings ->
+                            Log.d("FacultyMainScreen", "🎓 Rendering course: ${courseWithRatings.course.name}")
+
                             CourseCard(
-                                courseWithRatings = courseWithRatings,
-                                onClick = { onCourseClick(courseWithRatings.course.id) }
+                                courseName = courseWithRatings.course.name,
+                                teacherName = courseWithRatings.teacherName,
+                                avgClarity = courseWithRatings.avgClarity,
+                                avgFeasibility = courseWithRatings.avgFeasibility,
+                                avgAvailability = courseWithRatings.avgAvailability,
+                                onClick = {
+                                    Log.d("FacultyMainScreen", "👆 Course clicked: ${courseWithRatings.course.id}")
+                                    onCourseClick(courseWithRatings.course.id)
+                                }
                             )
                         }
                     }
+
+                    Log.d("FacultyMainScreen", "✅ LazyColumn composition completed")
                 }
             }
 
             is CourseListState.Error -> {
+                Log.d("FacultyMainScreen", "❌ Error state: ${courseListState.message}")
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
