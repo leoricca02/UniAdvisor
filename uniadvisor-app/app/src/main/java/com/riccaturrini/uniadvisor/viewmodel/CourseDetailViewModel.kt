@@ -57,12 +57,11 @@ class CourseDetailViewModel : ViewModel() {
     /**
      * Load complete course details including teacher, ratings, reviews, and notes with ratings
      */
-    fun loadCourseDetail(courseId: Int) {
+    fun loadCourseDetail(courseId: Int, noteSortOrder: String = "desc") {
         viewModelScope.launch {
-            Log.d("CourseDetailVM", "📚 loadCourseDetail called for ID: $courseId")
             _courseDetailState.value = CourseDetailState.Loading
             try {
-                Log.d("CourseDetailVM", "🔄 Fetching course details...")
+                Log.d("CourseDetailVM", "📚 Loading course details for ID: $courseId with sort order: $noteSortOrder")
 
                 // Get course details
                 val courseResponse = apiService.getCourseDetail(courseId)
@@ -113,7 +112,7 @@ class CourseDetailViewModel : ViewModel() {
                 }
 
                 // ✅ UPDATED: Get notes WITH ratings, sorted by rating (best first)
-                val notesResponse = apiService.getNotesWithRatings(courseId, order = "desc")
+                val notesResponse = apiService.getNotesWithRatings(courseId, order = noteSortOrder)
                 val notes = if (notesResponse.isSuccessful && notesResponse.body() != null) {
                     notesResponse.body()!!.also {
                         Log.d("CourseDetailVM", "✅ Loaded ${it.size} notes with ratings")

@@ -5,8 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,24 +16,23 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.riccaturrini.uniadvisor.viewmodel.*
+import com.riccaturrini.uniadvisor.viewmodel.AuthViewModel
+import com.riccaturrini.uniadvisor.viewmodel.CourseListState
+import com.riccaturrini.uniadvisor.viewmodel.CourseViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FacultyScreen(
-    authViewModel: AuthViewModel,
-    courseViewModel: CourseViewModel = viewModel()
+    authViewModel: AuthViewModel
 ) {
+    val courseViewModel: CourseViewModel = viewModel()
 
     Log.d("FacultyScreen", "🚀 FacultyScreen COMPOSABLE STARTED")
+
     val navController = rememberNavController()
     val courseListState by courseViewModel.courseListState.collectAsState()
     val currentUserData by authViewModel.currentUserData.collectAsState()
 
-    var facultyId by remember { mutableStateOf<Int?>(null) }
-    var facultyName by remember { mutableStateOf<String?>(null) }
-    var hasLoaded by remember { mutableStateOf(false) }
-
+    // ✅ Log per vedere quando lo stato cambia
     LaunchedEffect(courseListState) {
         Log.d("FacultyScreen", "🔄 courseListState CHANGED to: ${courseListState::class.simpleName}")
         when (courseListState) {
@@ -50,46 +48,43 @@ fun FacultyScreen(
         }
     }
 
-    // Load courses when faculty_id is available
     LaunchedEffect(currentUserData) {
+        Log.d("FacultyScreen", "🔄 Screen opened - Reloading user profile")
         Log.d("FacultyScreen", "LaunchedEffect triggered - currentUserData: $currentUserData")
 
         currentUserData?.let { userData ->
             Log.d("FacultyScreen", "User data found - faculty_id: ${userData.faculty_id}")
-
-            userData.faculty_id?.let { fId ->
-                if (!hasLoaded || facultyId != fId) {
-                    Log.d("FacultyScreen", "✅ Loading courses for faculty: $fId")
-                    facultyId = fId
-                    facultyName = "Your Faculty" // Could fetch actual name from API if needed
-                    courseViewModel.loadCoursesByFaculty(fId)
-                    hasLoaded = true
-                }
+            userData.faculty_id?.let { facultyId ->
+                Log.d("FacultyScreen", "✅ Loading courses for faculty: $facultyId")
+                courseViewModel.loadCoursesByFaculty(facultyId)
             } ?: run {
-                Log.e("FacultyScreen", "❌ User has no faculty_id!")
+                Log.d("FacultyScreen", "⚠️ User has no faculty_id")
             }
         } ?: run {
-            Log.e("FacultyScreen", "❌ currentUserData is null!")
+            Log.d("FacultyScreen", "⚠️ currentUserData is null")
         }
     }
 
-    NavHost(navController = navController, startDestination = "faculty_main") {
+    NavHost(
+        navController = navController,
+        startDestination = "faculty_main"
+    ) {
         composable("faculty_main") {
             FacultyMainScreen(
                 courseListState = courseListState,
-                facultyId = facultyId,
-                facultyName = facultyName,
+                facultyId = currentUserData?.faculty_id,
+                facultyName = when (currentUserData?.faculty_id) {
+                    1 -> "Engineering"
+                    2 -> "Medicine"
+                    3 -> "Law"
+                    else -> null
+                },
                 onCourseClick = { courseId ->
                     navController.navigate("course_detail/$courseId")
                 },
                 onRefresh = {
-                    facultyId?.let { fId ->
-                        Log.d("FacultyScreen", "🔄 Refreshing courses for faculty: $fId")
-                        courseViewModel.loadCoursesByFaculty(fId)
-                    } ?: run {
-                        // ✅ FIXED: If no faculty_id, try reloading user profile
-                        Log.d("FacultyScreen", "🔄 No faculty_id, reloading user profile")
-                        authViewModel.checkUserProfile()
+                    currentUserData?.faculty_id?.let { facultyId ->
+                        courseViewModel.loadCoursesByFaculty(facultyId)
                     }
                 }
             )
@@ -120,6 +115,10 @@ fun FacultyMainScreen(
     Log.d("FacultyMainScreen", "📊 State: ${courseListState::class.simpleName}")
     Log.d("FacultyMainScreen", "🏫 Faculty ID: $facultyId")
 
+    // ✅ NUOVO: State per ordinamento corsi
+    var courseSortOrder by remember { mutableStateOf("name_asc") } // name_asc, name_desc, rating_desc, rating_asc
+    var showCourseSortMenu by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -139,6 +138,66 @@ fun FacultyMainScreen(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 ),
                 actions = {
+                    // ✅ NUOVO: Bottone ordinamento
+                    IconButton(onClick = { showCourseSortMenu = true }) {
+                        Icon(Icons.Default.FilterList, contentDescription = "Sort courses")
+                    }
+
+                    // Menu ordinamento
+                    DropdownMenu(
+                        expanded = showCourseSortMenu,
+                        onDismissRequest = { showCourseSortMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("📚 Name A-Z") },
+                            onClick = {
+                                courseSortOrder = "name_asc"
+                                showCourseSortMenu = false
+                            },
+                            leadingIcon = {
+                                if (courseSortOrder == "name_asc") {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("📚 Name Z-A") },
+                            onClick = {
+                                courseSortOrder = "name_desc"
+                                showCourseSortMenu = false
+                            },
+                            leadingIcon = {
+                                if (courseSortOrder == "name_desc") {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("⭐ Highest rated") },
+                            onClick = {
+                                courseSortOrder = "rating_desc"
+                                showCourseSortMenu = false
+                            },
+                            leadingIcon = {
+                                if (courseSortOrder == "rating_desc") {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("⭐ Lowest rated") },
+                            onClick = {
+                                courseSortOrder = "rating_asc"
+                                showCourseSortMenu = false
+                            },
+                            leadingIcon = {
+                                if (courseSortOrder == "rating_asc") {
+                                    Icon(Icons.Default.Check, contentDescription = null)
+                                }
+                            }
+                        )
+                    }
+
                     IconButton(onClick = onRefresh) {
                         Icon(Icons.Default.Refresh, contentDescription = "Refresh")
                     }
@@ -146,52 +205,9 @@ fun FacultyMainScreen(
             )
         }
     ) { paddingValues ->
-        // Show message if no faculty is selected
-        if (facultyId == null) {
-            Log.d("FacultyMainScreen", "⚠️ No faculty ID - showing selection prompt")
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.padding(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.School,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "No faculty selected",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Please select a faculty in your profile first",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(onClick = onRefresh) {
-                        Icon(Icons.Default.Refresh, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Reload")
-                    }
-                }
-            }
-            return@Scaffold
-        }
-
-        // Show courses list based on state
-        when (courseListState) {
-            is CourseListState.Loading -> {
-                Log.d("FacultyMainScreen", "⏳ Showing loading state")
+        when {
+            facultyId == null -> {
+                Log.d("FacultyMainScreen", "⚠️ No faculty ID - showing selection prompt")
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -202,9 +218,18 @@ fun FacultyMainScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        CircularProgressIndicator()
+                        Icon(
+                            imageVector = Icons.Default.School,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                         Text(
-                            text = "Loading courses...",
+                            text = "No Faculty Selected",
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Text(
+                            text = "Please select a faculty in your profile",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -212,12 +237,60 @@ fun FacultyMainScreen(
                 }
             }
 
-            is CourseListState.Success -> {
-                val courses = courseListState.courses
+            courseListState is CourseListState.Loading -> {
+                Log.d("FacultyMainScreen", "⏳ Showing loading state")
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            courseListState is CourseListState.Error -> {
+                Log.d("FacultyMainScreen", "❌ Showing error state")
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Error,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                        Text(
+                            text = "Error Loading Courses",
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Text(
+                            text = (courseListState as CourseListState.Error).message,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Button(onClick = onRefresh) {
+                            Icon(Icons.Default.Refresh, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Retry")
+                        }
+                    }
+                }
+            }
+
+            courseListState is CourseListState.Success -> {
+                val courses = (courseListState as CourseListState.Success).courses
                 Log.d("FacultyMainScreen", "✅ Success state with ${courses.size} courses")
 
                 if (courses.isEmpty()) {
-                    Log.d("FacultyMainScreen", "📭 No courses to display")
+                    Log.d("FacultyMainScreen", "📭 No courses available")
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -229,18 +302,17 @@ fun FacultyMainScreen(
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.School,
+                                imageVector = Icons.Default.MenuBook,
                                 contentDescription = null,
                                 modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = MaterialTheme.colorScheme.primary
                             )
                             Text(
-                                text = "No courses available",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
+                                text = "No Courses Available",
+                                style = MaterialTheme.typography.titleLarge
                             )
                             Text(
-                                text = "Check back later for course listings",
+                                text = "Check back later for new courses",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -249,6 +321,21 @@ fun FacultyMainScreen(
                 } else {
                     Log.d("FacultyMainScreen", "📚 About to render LazyColumn with ${courses.size} courses")
 
+                    // ✅ ORDINA i corsi in base a courseSortOrder
+                    val sortedCourses = remember(courses, courseSortOrder) {
+                        when (courseSortOrder) {
+                            "name_asc" -> courses.sortedBy { it.course.name }
+                            "name_desc" -> courses.sortedByDescending { it.course.name }
+                            "rating_desc" -> courses.sortedByDescending {
+                                (it.avgClarity + it.avgFeasibility + it.avgAvailability) / 3.0
+                            }
+                            "rating_asc" -> courses.sortedBy {
+                                (it.avgClarity + it.avgFeasibility + it.avgAvailability) / 3.0
+                            }
+                            else -> courses
+                        }
+                    }
+
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -256,9 +343,10 @@ fun FacultyMainScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(courses) { courseWithRatings ->
+                        items(sortedCourses) { courseWithRatings ->
                             Log.d("FacultyMainScreen", "🎓 Rendering course: ${courseWithRatings.course.name}")
 
+                            // ✅ USA la funzione CourseCard da CoursesListScreen.kt
                             CourseCard(
                                 courseName = courseWithRatings.course.name,
                                 teacherName = courseWithRatings.teacherName,
@@ -274,46 +362,6 @@ fun FacultyMainScreen(
                     }
 
                     Log.d("FacultyMainScreen", "✅ LazyColumn composition completed")
-                }
-            }
-
-            is CourseListState.Error -> {
-                Log.d("FacultyMainScreen", "❌ Error state: ${courseListState.message}")
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.padding(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                        Text(
-                            text = "Error loading courses",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Text(
-                            text = courseListState.message,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                        )
-                        Button(onClick = onRefresh) {
-                            Icon(Icons.Default.Refresh, contentDescription = null)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Retry")
-                        }
-                    }
                 }
             }
         }

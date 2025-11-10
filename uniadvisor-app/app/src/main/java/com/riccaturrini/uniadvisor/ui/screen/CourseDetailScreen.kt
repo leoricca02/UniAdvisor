@@ -36,9 +36,19 @@ fun CourseDetailScreen(
     var showRateNoteDialog by remember { mutableStateOf(false) }
     var selectedNoteId by remember { mutableStateOf<Int?>(null) }
 
+    var noteSortOrder by remember { mutableStateOf("desc") } // "desc" = best first, "asc" = worst first
+    var showNoteSortMenu by remember { mutableStateOf(false) }
+
+    var reviewSortOrder by remember { mutableStateOf("date_desc") } // date_desc, date_asc, rating_desc, rating_asc
+    var showReviewSortMenu by remember { mutableStateOf(false) }
     // Load course details on start
     LaunchedEffect(courseId) {
         viewModel.loadCourseDetail(courseId)
+    }
+
+    // Load course details on note sort order change
+    LaunchedEffect(noteSortOrder) {
+        viewModel.loadCourseDetail(courseId, noteSortOrder)
     }
 
     // Handle review added successfully
@@ -179,22 +189,43 @@ fun CourseDetailScreen(
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold
                                 )
-                                // ✅ Legend for rating
-                                if (data.notes.isNotEmpty()) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
+
+                                // ✅ NUOVO: Bottone ordinamento
+                                Box {
+                                    IconButton(onClick = { showNoteSortMenu = true }) {
                                         Icon(
-                                            imageVector = Icons.Default.Star,
-                                            contentDescription = null,
-                                            tint = Color(0xFFFFD700),
-                                            modifier = Modifier.size(16.dp)
+                                            imageVector = Icons.Default.FilterList,
+                                            contentDescription = "Sort notes"
                                         )
-                                        Text(
-                                            text = "Best rated first",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    }
+
+                                    DropdownMenu(
+                                        expanded = showNoteSortMenu,
+                                        onDismissRequest = { showNoteSortMenu = false }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text("⭐ Best rated first") },
+                                            onClick = {
+                                                noteSortOrder = "desc"
+                                                showNoteSortMenu = false
+                                            },
+                                            leadingIcon = {
+                                                if (noteSortOrder == "desc") {
+                                                    Icon(Icons.Default.Check, contentDescription = null)
+                                                }
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("⭐ Worst rated first") },
+                                            onClick = {
+                                                noteSortOrder = "asc"
+                                                showNoteSortMenu = false
+                                            },
+                                            leadingIcon = {
+                                                if (noteSortOrder == "asc") {
+                                                    Icon(Icons.Default.Check, contentDescription = null)
+                                                }
+                                            }
                                         )
                                     }
                                 }
@@ -220,12 +251,82 @@ fun CourseDetailScreen(
 
                         // Reviews Section Header
                         item {
-                            Text(
-                                text = "Reviews (${data.reviews.size})",
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(top = 8.dp)
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Reviews (${data.reviews.size})",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(top = 8.dp)
+                                )
+
+                                // ✅ Bottone ordinamento recensioni
+                                Box {
+                                    IconButton(onClick = { showReviewSortMenu = true }) {
+                                        Icon(
+                                            imageVector = Icons.Default.FilterList,
+                                            contentDescription = "Sort reviews"
+                                        )
+                                    }
+
+                                    DropdownMenu(
+                                        expanded = showReviewSortMenu,
+                                        onDismissRequest = { showReviewSortMenu = false }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text("🕐 Newest first") },
+                                            onClick = {
+                                                reviewSortOrder = "date_desc"
+                                                showReviewSortMenu = false
+                                            },
+                                            leadingIcon = {
+                                                if (reviewSortOrder == "date_desc") {
+                                                    Icon(Icons.Default.Check, contentDescription = null)
+                                                }
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("🕐 Oldest first") },
+                                            onClick = {
+                                                reviewSortOrder = "date_asc"
+                                                showReviewSortMenu = false
+                                            },
+                                            leadingIcon = {
+                                                if (reviewSortOrder == "date_asc") {
+                                                    Icon(Icons.Default.Check, contentDescription = null)
+                                                }
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("⭐ Highest rated") },
+                                            onClick = {
+                                                reviewSortOrder = "rating_desc"
+                                                showReviewSortMenu = false
+                                            },
+                                            leadingIcon = {
+                                                if (reviewSortOrder == "rating_desc") {
+                                                    Icon(Icons.Default.Check, contentDescription = null)
+                                                }
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("⭐ Lowest rated") },
+                                            onClick = {
+                                                reviewSortOrder = "rating_asc"
+                                                showReviewSortMenu = false
+                                            },
+                                            leadingIcon = {
+                                                if (reviewSortOrder == "rating_asc") {
+                                                    Icon(Icons.Default.Check, contentDescription = null)
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                         // Reviews List
@@ -234,7 +335,20 @@ fun CourseDetailScreen(
                                 EmptyCourseReviewsCard()
                             }
                         } else {
-                            items(data.reviews) { review ->
+                            // ✅ Calcola le recensioni ordinate
+                            val sortedReviews = when (reviewSortOrder) {
+                                "date_desc" -> data.reviews.sortedByDescending { it.created_at }
+                                "date_asc" -> data.reviews.sortedBy { it.created_at }
+                                "rating_desc" -> data.reviews.sortedByDescending {
+                                    (it.rating_clarity + it.rating_feasibility + it.rating_availability) / 3.0
+                                }
+                                "rating_asc" -> data.reviews.sortedBy {
+                                    (it.rating_clarity + it.rating_feasibility + it.rating_availability) / 3.0
+                                }
+                                else -> data.reviews
+                            }
+
+                            items(sortedReviews) { review ->
                                 CourseReviewCard(review = review)
                             }
                         }
