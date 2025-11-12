@@ -27,8 +27,17 @@ class CourseViewModel : ViewModel() {
     private val _courseListState = MutableStateFlow<CourseListState>(CourseListState.Loading)
     val courseListState: StateFlow<CourseListState> = _courseListState
 
-    fun loadCoursesByFaculty(facultyId: Int) {
+    fun resetCourseList() {
+        _courseListState.value = CourseListState.Loading
+    }
+
+    fun loadCoursesByFaculty(facultyId: Int, forceReload: Boolean = false) {
         Log.d("CourseViewModel", "📚 loadCoursesByFaculty called with ID: $facultyId")
+
+        if (forceReload) {
+            _courseListState.value = CourseListState.Loading
+        }
+
         viewModelScope.launch {
             _courseListState.value = CourseListState.Loading
             try {

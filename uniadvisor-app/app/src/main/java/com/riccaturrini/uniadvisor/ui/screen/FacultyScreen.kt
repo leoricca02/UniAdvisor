@@ -53,7 +53,10 @@ fun FacultyScreen(
         Log.d("FacultyScreen", "LaunchedEffect triggered - currentUserData: $currentUserData")
 
         currentUserData?.let { userData ->
-            Log.d("FacultyScreen", "User data found - faculty_id: ${userData.faculty_id}")
+            Log.d("FacultyScreen", "User data found:")
+            Log.d("FacultyScreen", "   - faculty_id: ${userData.faculty_id}")
+            Log.d("FacultyScreen", "   - faculty_name: ${userData.faculty_name}") // ✅ Verifica questo!
+
             userData.faculty_id?.let { facultyId ->
                 Log.d("FacultyScreen", "✅ Loading courses for faculty: $facultyId")
                 courseViewModel.loadCoursesByFaculty(facultyId)
@@ -73,12 +76,7 @@ fun FacultyScreen(
             FacultyMainScreen(
                 courseListState = courseListState,
                 facultyId = currentUserData?.faculty_id,
-                facultyName = when (currentUserData?.faculty_id) {
-                    1 -> "Engineering"
-                    2 -> "Medicine"
-                    3 -> "Law"
-                    else -> null
-                },
+                facultyName = currentUserData?.faculty_name,
                 onCourseClick = { courseId ->
                     navController.navigate("course_detail/$courseId")
                 },
@@ -123,22 +121,12 @@ fun FacultyMainScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
-                        Text("Academic")
-                        facultyName?.let {
-                            Text(
-                                text = it,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                    Text(facultyName ?: "Select Faculty")
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 ),
                 actions = {
-                    // ✅ NUOVO: Bottone ordinamento
                     IconButton(onClick = { showCourseSortMenu = true }) {
                         Icon(Icons.Default.FilterList, contentDescription = "Sort courses")
                     }

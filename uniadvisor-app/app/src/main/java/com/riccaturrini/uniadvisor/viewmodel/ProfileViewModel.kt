@@ -242,20 +242,24 @@ class ProfileViewModel : ViewModel() {
     /**
      * Cambia la facoltà dell'utente
      */
-    fun changeFaculty(facultyId: Int) {
+    fun changeFaculty(newFacultyId: Int, courseViewModel: CourseViewModel? = null) {
         viewModelScope.launch {
             _updateState.value = ProfileUpdateState.Loading
+
             try {
-                val response = apiService.changeFaculty(facultyId)
+                val response = apiService.changeFaculty(newFacultyId)
+
                 if (response.isSuccessful) {
+                    courseViewModel?.resetCourseList()
+
+                    // Reload profile to get updated faculty
+                    loadProfile()
                     _updateState.value = ProfileUpdateState.Success
-                    loadProfile() // Ricarica il profilo con la nuova facoltà
                 } else {
-                    _updateState.value = ProfileUpdateState.Error("Errore nel cambio facoltà: ${response.code()}")
+                    _updateState.value = ProfileUpdateState.Error("Failed to change faculty")
                 }
             } catch (e: Exception) {
-                Log.e("ProfileViewModel", "Error changing faculty", e)
-                _updateState.value = ProfileUpdateState.Error(e.message ?: "Errore di connessione")
+                _updateState.value = ProfileUpdateState.Error(e.message ?: "Unknown error")
             }
         }
     }

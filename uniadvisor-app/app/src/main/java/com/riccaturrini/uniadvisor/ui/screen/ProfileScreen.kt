@@ -385,7 +385,7 @@ fun StatsCard(
                 )
                 StatItem(
                     icon = Icons.Default.Star,
-                    label = "Ratings",
+                    label = "Note Ratings",
                     value = ratingsCount.toString()
                 )
             }

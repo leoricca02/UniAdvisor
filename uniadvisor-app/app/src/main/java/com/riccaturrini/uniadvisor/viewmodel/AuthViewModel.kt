@@ -77,12 +77,17 @@ class AuthViewModel : ViewModel() {
                 val profileResponse = userRepository.getMyProfile()
 
                 if (profileResponse != null) {
-                    // Profile exists - SUCCESS
-                    Log.d("AuthViewModel", "✅ Profile loaded: $profileResponse")
+                    // ✅ AGGIUNTO: Log dettagliato della risposta
+                    Log.d("AuthViewModel", "✅ Profile loaded successfully")
+                    Log.d("AuthViewModel", "   User ID: ${profileResponse.id}")
+                    Log.d("AuthViewModel", "   Email: ${profileResponse.email}")
+                    Log.d("AuthViewModel", "   Name: ${profileResponse.first_name} ${profileResponse.last_name}")
+                    Log.d("AuthViewModel", "   Faculty ID: ${profileResponse.faculty_id}")
+                    Log.d("AuthViewModel", "   Faculty Name: ${profileResponse.faculty_name}") // ✅ Verifica questo!
+
                     _currentUserData.value = profileResponse
                     _authUiState.value = AuthUiState.Success
                 } else {
-                    // Profile not found (404) - Need to create profile
                     Log.w("AuthViewModel", "⚠️ Profile not found in backend - need to create")
                     _authUiState.value = AuthUiState.ProfileCreationRequired
                 }

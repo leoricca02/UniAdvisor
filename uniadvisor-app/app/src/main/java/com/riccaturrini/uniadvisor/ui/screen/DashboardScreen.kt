@@ -76,7 +76,8 @@ fun DashboardNavGraph(
                         launchSingleTop = true
                         restoreState = true
                     }
-                }
+                },
+                onLogout = onLogout
             )
         }
         composable("faculty") {

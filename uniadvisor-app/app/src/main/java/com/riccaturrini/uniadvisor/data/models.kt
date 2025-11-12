@@ -19,7 +19,8 @@ data class UserResponse(
     val birth_date: String,
     val city: String,
     val is_admin: Boolean,
-    val faculty_id: Int?
+    val faculty_id: Int?,
+    val faculty_name: String? = null
 )
 
 // Corrisponde al modello Faculty del backend

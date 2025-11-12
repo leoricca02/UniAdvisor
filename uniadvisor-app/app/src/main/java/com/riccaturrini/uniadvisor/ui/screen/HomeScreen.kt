@@ -25,24 +25,68 @@ import java.time.LocalTime
 fun HomeScreen(
     authViewModel: AuthViewModel,
     profileViewModel: ProfileViewModel = viewModel(),
-    onNavigate: (String) -> Unit = {}
+    onNavigate: (String) -> Unit = {},
+    onLogout: () -> Unit = {}
 ) {
     val currentUser by authViewModel.currentUserData.collectAsState()
     val profileState by profileViewModel.profileState.collectAsState()
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     // Load profile data on start
     LaunchedEffect(Unit) {
         profileViewModel.loadProfile()
     }
 
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.ExitToApp,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = { Text("Logout") },
+            text = { Text("Are you sure you want to logout?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLogoutDialog = false
+                        onLogout()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Logout")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("UniAdvisor") },
+                title = { Text("Home") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                ),
+                actions = {
+                    IconButton(onClick = { showLogoutDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.ExitToApp,
+                            contentDescription = "Logout",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
             )
         }
     ) { paddingValues ->
@@ -237,7 +281,7 @@ fun StatisticsCard(
                 )
                 StatItem(
                     icon = Icons.Default.Star,
-                    label = "Ratings",
+                    label = "Note Ratings",
                     value = ratingsCount.toString(),
                     color = MaterialTheme.colorScheme.tertiary
                 )
@@ -313,12 +357,12 @@ fun FacultyInfoCard(facultyName: String) {
             }
             Column {
                 Text(
-                    text = "Your Faculty",
+                    text = "Academic", // ✅ CAMBIATO: da "Your Faculty" a "Academic"
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = facultyName,
+                    text = facultyName, // ✅ Questo ora mostra il nome della facoltà
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
