@@ -4,7 +4,7 @@ TODO
 
 
 
--Inserimento note non intuitivo, da mettere assieme al + dove si mettono le recensioni (possibilità scelta recensione e note)
+###### -Inserimento note non intuitivo, da mettere assieme al + dove si mettono le recensioni (possibilità scelta recensione e note)
 
 
 
