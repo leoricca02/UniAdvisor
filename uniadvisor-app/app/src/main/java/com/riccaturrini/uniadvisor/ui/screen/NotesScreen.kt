@@ -241,7 +241,7 @@ fun NoteCard(
                         modifier = Modifier.size(24.dp)
                     )
                     Text(
-                        text = "Note #${note.id}",
+                        text = "Note",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -264,12 +264,23 @@ fun NoteCard(
 
             HorizontalDivider()
 
-            // Course info
-            Text(
-                text = "Course ID: ${note.course_id}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.School,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = note.course_name ?: "Unknown Course",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
 
             // Actions
             Row(
@@ -278,8 +289,7 @@ fun NoteCard(
             ) {
                 OutlinedButton(
                     onClick = {
-                        // Open PDF in browser/viewer
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(note.file_id))
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(note.file_id))  // ✅ CORRETTO
                         context.startActivity(intent)
                     },
                     modifier = Modifier.weight(1f)

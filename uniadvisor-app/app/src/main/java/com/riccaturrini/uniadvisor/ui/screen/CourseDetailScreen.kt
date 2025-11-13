@@ -24,12 +24,15 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.ChevronRight
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CourseDetailScreen(
     courseId: Int,
     onNavigateBack: () -> Unit,
+    onNavigateToNoteDetail: (noteId: Int) -> Unit,
     viewModel: CourseDetailViewModel = viewModel()
 ) {
     val courseState by viewModel.courseDetailState.collectAsState()
@@ -39,8 +42,6 @@ fun CourseDetailScreen(
     var showAddReviewDialog by remember { mutableStateOf(false) }
     var showUploadNoteDialog by remember { mutableStateOf(false) }
     var showActionMenu by remember { mutableStateOf(false) }
-    var showRateNoteDialog by remember { mutableStateOf(false) }
-    var selectedNoteId by remember { mutableStateOf<Int?>(null) }
 
     var noteSortOrder by remember { mutableStateOf("desc") }
     var showNoteSortMenu by remember { mutableStateOf(false) }
@@ -70,8 +71,6 @@ fun CourseDetailScreen(
 
         if (noteRatingState is NoteRatingState.Success) {
             Log.d("CourseDetailScreen", "✅ Note rating success - will reload after delay")
-            showRateNoteDialog = false
-            selectedNoteId = null
 
             // ✅ Aspetta un attimo per permettere al backend di aggiornare
             kotlinx.coroutines.delay(1000) // 1 secondo di delay
@@ -288,11 +287,10 @@ fun CourseDetailScreen(
                             }
                         } else {
                             items(data.notes) { note ->
-                                CourseNoteCardWithRating(
+                                CourseNoteCard(
                                     note = note,
-                                    onRateClick = {
-                                        selectedNoteId = note.id
-                                        showRateNoteDialog = true
+                                    onNoteClick = {
+                                        onNavigateToNoteDetail(note.id)
                                     }
                                 )
                             }
@@ -435,20 +433,6 @@ fun CourseDetailScreen(
                         viewModel.addReview(courseId, review)
                     },
                     addReviewState = addReviewState
-                )
-            }
-
-            if (showRateNoteDialog && selectedNoteId != null) {
-                RateNoteDialog(
-                    onDismiss = {
-                        showRateNoteDialog = false
-                        selectedNoteId = null
-                        viewModel.resetNoteRatingState()
-                    },
-                    onConfirm = { rating, comment ->
-                        viewModel.addNoteRating(courseId, selectedNoteId!!, rating, comment)
-                    },
-                    noteRatingState = noteRatingState
                 )
             }
         }
@@ -1235,6 +1219,109 @@ fun StarRatingSelector(rating: Int, onRatingChange: (Int) -> Unit) {
                     imageVector = if (index < rating) Icons.Default.Star else Icons.Outlined.StarOutline,
                     contentDescription = null,
                     tint = if (index < rating) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun CourseNoteCard(
+    note: NoteWithRating,
+    onNoteClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onNoteClick),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Note Header with Rating
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Description,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = "Student Note",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Average rating badge (if present)
+                if (note.average_rating != null && note.average_rating > 0) {
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = Color(0xFFFFD700).copy(alpha = 0.2f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = null,
+                                tint = Color(0xFFFFD700),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = String.format("%.1f", note.average_rating),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF000000).copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Note Description (preview)
+            if (!note.description.isNullOrBlank()) {
+                Text(
+                    text = note.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2
+                )
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+            // "View Details" prompt
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Tap to view details and reviews",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }

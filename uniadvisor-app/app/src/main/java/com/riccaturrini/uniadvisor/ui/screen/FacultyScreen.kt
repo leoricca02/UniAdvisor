@@ -19,6 +19,7 @@ import androidx.navigation.compose.rememberNavController
 import com.riccaturrini.uniadvisor.viewmodel.AuthViewModel
 import com.riccaturrini.uniadvisor.viewmodel.CourseListState
 import com.riccaturrini.uniadvisor.viewmodel.CourseViewModel
+import com.riccaturrini.uniadvisor.ui.screen.NoteDetailScreen
 
 @Composable
 fun FacultyScreen(
@@ -37,11 +38,19 @@ fun FacultyScreen(
         Log.d("FacultyScreen", "🔄 courseListState CHANGED to: ${courseListState::class.simpleName}")
         when (courseListState) {
             is CourseListState.Success -> {
-                Log.d("FacultyScreen", "✅ SUCCESS STATE with ${(courseListState as CourseListState.Success).courses.size} courses")
+                Log.d(
+                    "FacultyScreen",
+                    "✅ SUCCESS STATE with ${(courseListState as CourseListState.Success).courses.size} courses"
+                )
             }
+
             is CourseListState.Error -> {
-                Log.d("FacultyScreen", "❌ ERROR STATE: ${(courseListState as CourseListState.Error).message}")
+                Log.d(
+                    "FacultyScreen",
+                    "❌ ERROR STATE: ${(courseListState as CourseListState.Error).message}"
+                )
             }
+
             is CourseListState.Loading -> {
                 Log.d("FacultyScreen", "⏳ LOADING STATE")
             }
@@ -55,7 +64,10 @@ fun FacultyScreen(
         currentUserData?.let { userData ->
             Log.d("FacultyScreen", "User data found:")
             Log.d("FacultyScreen", "   - faculty_id: ${userData.faculty_id}")
-            Log.d("FacultyScreen", "   - faculty_name: ${userData.faculty_name}") // ✅ Verifica questo!
+            Log.d(
+                "FacultyScreen",
+                "   - faculty_name: ${userData.faculty_name}"
+            ) // ✅ Verifica questo!
 
             userData.faculty_id?.let { facultyId ->
                 Log.d("FacultyScreen", "✅ Loading courses for faculty: $facultyId")
@@ -88,10 +100,28 @@ fun FacultyScreen(
             )
         }
 
+        // ✅ MODIFICATO: Aggiunto onNavigateToNoteDetail
         composable("course_detail/{courseId}") { backStackEntry ->
             val courseId = backStackEntry.arguments?.getString("courseId")?.toIntOrNull()
             if (courseId != null) {
                 CourseDetailScreen(
+                    courseId = courseId,
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToNoteDetail = { noteId ->
+                        navController.navigate("note_detail/$courseId/$noteId")
+                    }
+                )
+            }
+        }
+
+        // ✅ NUOVO: Route per NoteDetailScreen
+        composable("note_detail/{courseId}/{noteId}") { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId")?.toIntOrNull()
+            val noteId = backStackEntry.arguments?.getString("noteId")?.toIntOrNull()
+
+            if (courseId != null && noteId != null) {
+                NoteDetailScreen(
+                    noteId = noteId,
                     courseId = courseId,
                     onNavigateBack = { navController.popBackStack() }
                 )
@@ -113,7 +143,6 @@ fun FacultyMainScreen(
     Log.d("FacultyMainScreen", "📊 State: ${courseListState::class.simpleName}")
     Log.d("FacultyMainScreen", "🏫 Faculty ID: $facultyId")
 
-    // ✅ NUOVO: State per ordinamento corsi
     var courseSortOrder by remember { mutableStateOf("name_asc") } // name_asc, name_desc, rating_desc, rating_asc
     var showCourseSortMenu by remember { mutableStateOf(false) }
 

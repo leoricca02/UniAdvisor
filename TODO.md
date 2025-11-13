@@ -20,7 +20,7 @@ TODO
 
 
 
--Non si vedono le varie reviews delle singole note, si vedono solo i voti
+###### -Non si vedono le varie reviews delle singole note, si vedono solo i voti DONE
 
 
 

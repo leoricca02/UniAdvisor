@@ -110,7 +110,7 @@ fun UniAdvisorApp() {
                         popUpTo("splash") { inclusive = true }
                     }
                 },
-                // ✅ Handle logout
+                // Handle logout
                 onLogout = {
                     navController.navigate("login") {
                         popUpTo("splash") { inclusive = true }
@@ -140,15 +140,6 @@ fun UniAdvisorApp() {
                         popUpTo("splash") { inclusive = true }
                     }
                 }
-            )
-        }
-
-        // 🔹 Other screens
-        composable("course_detail/{courseId}") { backStackEntry ->
-            val courseId = backStackEntry.arguments?.getString("courseId")?.toIntOrNull() ?: 0
-            CourseDetailScreen(
-                courseId = courseId,
-                onNavigateBack = { navController.popBackStack() }
             )
         }
     }

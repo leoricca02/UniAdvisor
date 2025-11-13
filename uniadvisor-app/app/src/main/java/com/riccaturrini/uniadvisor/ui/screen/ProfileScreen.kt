@@ -1,5 +1,6 @@
 package com.riccaturrini.uniadvisor.ui.screen
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -19,6 +20,7 @@ import com.riccaturrini.uniadvisor.viewmodel.AuthViewModel
 import com.riccaturrini.uniadvisor.viewmodel.ProfileUiState
 import com.riccaturrini.uniadvisor.viewmodel.ProfileUpdateState
 import com.riccaturrini.uniadvisor.viewmodel.ProfileViewModel
+import com.riccaturrini.uniadvisor.viewmodel.CourseViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,7 +37,6 @@ fun ProfileScreen(
     var showChangeFacultyDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-    // 🔥 CARICA IL PROFILO ALL'AVVIO
     LaunchedEffect(Unit) {
         profileViewModel.loadProfile()
     }
