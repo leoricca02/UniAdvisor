@@ -20,6 +20,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.riccaturrini.uniadvisor.data.*
 import com.riccaturrini.uniadvisor.viewmodel.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,13 +37,15 @@ fun CourseDetailScreen(
     val noteRatingState by viewModel.noteRatingState.collectAsState()
 
     var showAddReviewDialog by remember { mutableStateOf(false) }
+    var showUploadNoteDialog by remember { mutableStateOf(false) }
+    var showActionMenu by remember { mutableStateOf(false) }
     var showRateNoteDialog by remember { mutableStateOf(false) }
     var selectedNoteId by remember { mutableStateOf<Int?>(null) }
 
-    var noteSortOrder by remember { mutableStateOf("desc") } // "desc" = best first, "asc" = worst first
+    var noteSortOrder by remember { mutableStateOf("desc") }
     var showNoteSortMenu by remember { mutableStateOf(false) }
 
-    var reviewSortOrder by remember { mutableStateOf("date_desc") } // date_desc, date_asc, rating_desc, rating_asc
+    var reviewSortOrder by remember { mutableStateOf("date_desc") }
     var showReviewSortMenu by remember { mutableStateOf(false) }
     // Load course details on start
     LaunchedEffect(courseId) {
@@ -97,11 +103,56 @@ fun CourseDetailScreen(
         },
         floatingActionButton = {
             if (courseState is CourseDetailState.Success) {
-                FloatingActionButton(
-                    onClick = { showAddReviewDialog = true },
-                    containerColor = MaterialTheme.colorScheme.primary
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Review")
+                    if (showActionMenu) {
+                        // Opzione: Upload Note
+                        SmallFloatingActionButton(
+                            onClick = {
+                                showActionMenu = false
+                                showUploadNoteDialog = true
+                            },
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Description, contentDescription = null)
+                                Text("Note", style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+
+                        // Opzione: Add Review
+                        SmallFloatingActionButton(
+                            onClick = {
+                                showActionMenu = false
+                                showAddReviewDialog = true
+                            },
+                            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.RateReview, contentDescription = null)
+                                Text("Review", style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+                    }
+                    FloatingActionButton(
+                        onClick = { showActionMenu = !showActionMenu },
+                        containerColor = MaterialTheme.colorScheme.primary
+                    ) {
+                        Icon(
+                            imageVector = if (showActionMenu) Icons.Default.Close else Icons.Default.Add,
+                            contentDescription = if (showActionMenu) "Close menu" else "Add content"
+                        )
+                    }
                 }
             }
         }
@@ -189,8 +240,6 @@ fun CourseDetailScreen(
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold
                                 )
-
-                                // ✅ NUOVO: Bottone ordinamento
                                 Box {
                                     IconButton(onClick = { showNoteSortMenu = true }) {
                                         Icon(
@@ -361,6 +410,20 @@ fun CourseDetailScreen(
                 }
             }
 
+            if (showUploadNoteDialog) {
+                UploadNoteDialogInCourse(
+                    courseId = courseId,
+                    onDismiss = {
+                        showUploadNoteDialog = false
+                    },
+                    onSuccess = {
+                        showUploadNoteDialog = false
+                        // Ricarica i dati del corso per mostrare la nuova nota
+                        viewModel.loadCourseDetail(courseId, noteSortOrder)
+                    }
+                )
+            }
+
             // Add Review Dialog
             if (showAddReviewDialog) {
                 AddCourseReviewDialog(
@@ -375,7 +438,6 @@ fun CourseDetailScreen(
                 )
             }
 
-            // ✅ NEW: Rate Note Dialog
             if (showRateNoteDialog && selectedNoteId != null) {
                 RateNoteDialog(
                     onDismiss = {
@@ -391,6 +453,128 @@ fun CourseDetailScreen(
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun UploadNoteDialogInCourse(
+    courseId: Int,
+    onDismiss: () -> Unit,
+    onSuccess: () -> Unit,
+    notesViewModel: NotesViewModel = viewModel()
+) {
+    var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
+    var selectedFileName by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+
+    val uploadState by notesViewModel.uploadState.collectAsState()
+    val context = LocalContext.current
+
+    // Handle upload success
+    LaunchedEffect(uploadState) {
+        if (uploadState is UploadNoteState.Success) {
+            onSuccess()
+            notesViewModel.resetUploadState()
+        }
+    }
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            selectedFileUri = it
+            selectedFileName = it.lastPathSegment ?: "document.pdf"
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Description,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text("Upload Note")
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()), // ✅ Ora funziona
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // File picker button
+                OutlinedButton(
+                    onClick = { filePickerLauncher.launch("application/pdf") },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.AttachFile, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = selectedFileName.ifEmpty { "Select PDF file" },
+                        maxLines = 1
+                    )
+                }
+
+                // Description
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Description (optional)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 3
+                )
+
+                // Error message
+                if (uploadState is UploadNoteState.Error) {
+                    Text(
+                        text = (uploadState as UploadNoteState.Error).message,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    selectedFileUri?.let { uri ->
+                        notesViewModel.uploadNote(
+                            fileUri = uri,
+                            courseId = courseId,
+                            description = if (description.isBlank()) "" else description,
+                            fileName = selectedFileName
+                        )
+                    }
+                },
+                enabled = selectedFileUri != null && uploadState !is UploadNoteState.Uploading
+            ) {
+                if (uploadState is UploadNoteState.Uploading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text("Upload")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = uploadState !is UploadNoteState.Uploading
+            ) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 // ✅ NEW: Rate Note Dialog
@@ -530,7 +714,7 @@ fun RateNoteDialog(
     )
 }
 
-// ✅ UPDATED: Course Note Card with Rating Display
+// Course Note Card with Rating Display
 @Composable
 fun CourseNoteCardWithRating(
     note: NoteWithRating,
@@ -571,7 +755,7 @@ fun CourseNoteCardWithRating(
                     )
                 }
 
-                // ✅ UPDATED: Rating badge (shows average or "Rate" button)
+                // Rating badge (shows average or "Rate" button)
                 if (note.average_rating != null && note.average_rating > 0) {
                     // Show average rating
                     Surface(
