@@ -242,4 +242,9 @@ class AuthViewModel : ViewModel() {
     fun resetState() {
         _authUiState.value = AuthUiState.Idle
     }
+
+    fun updateCurrentUserData(userData: UserResponse) {
+        _currentUserData.value = userData
+        Log.d("AuthViewModel", "✅ Updated currentUserData with faculty: ${userData.faculty_id}")
+    }
 }

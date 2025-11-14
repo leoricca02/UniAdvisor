@@ -611,7 +611,13 @@ fun ChangeFacultyDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    selectedFacultyId?.let { viewModel.changeFaculty(it, courseViewModel) }
+                    selectedFacultyId?.let {
+                        viewModel.changeFaculty(
+                            it,
+                            courseViewModel,
+                            authViewModel = authViewModel
+                        )
+                    }
                 },
                 enabled = !isLoading && selectedFacultyId != null
             ) {

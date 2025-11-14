@@ -242,7 +242,7 @@ class ProfileViewModel : ViewModel() {
     /**
      * It changes the faculty of the user
      */
-    fun changeFaculty(newFacultyId: Int, courseViewModel: CourseViewModel? = null) {
+    fun changeFaculty(newFacultyId: Int, courseViewModel: CourseViewModel? = null, authViewModel: AuthViewModel? = null) {
         viewModelScope.launch {
             _updateState.value = ProfileUpdateState.Loading
 
@@ -256,38 +256,30 @@ class ProfileViewModel : ViewModel() {
                     // Reset courses
                     courseViewModel?.resetCourseList()
 
-                    // WAIT for profile to reload BEFORE setting Success
-                    _profileState.value = ProfileUiState.Loading  // Show it's reloading
+                    // Get updated user profile
+                    val userResponse = apiService.getMyProfile()
+                    if (userResponse.isSuccessful && userResponse.body() != null) {
+                        val user = userResponse.body()!!
 
-                    try {
-                        // Get updated user profile
-                        val userResponse = apiService.getMyProfile()
-                        if (userResponse.isSuccessful && userResponse.body() != null) {
-                            val user = userResponse.body()!!
+                        // Update AuthViewModel's currentUserData
+                        authViewModel?.updateCurrentUserData(user)
 
-                            // Get updated faculty
-                            val facultyResponse = apiService.getMyFaculty()
-                            val faculty = if (facultyResponse.isSuccessful && facultyResponse.body() != null) {
-                                facultyResponse.body()
-                            } else {
-                                null
-                            }
-
-                            // Get stats
-                            val stats = loadStats()
-
-                            // Update profile state with NEW faculty
-                            _profileState.value = ProfileUiState.Success(user, faculty, stats)
-                            Log.d("ProfileViewModel", "✅ Profile reloaded with new faculty: ${faculty?.name}")
-
-                            // NOW set success (after everything is loaded)
-                            _updateState.value = ProfileUpdateState.Success
+                        // Get faculty details
+                        val facultyResponse = apiService.getMyFaculty()
+                        val faculty = if (facultyResponse.isSuccessful && facultyResponse.body() != null) {
+                            facultyResponse.body()
                         } else {
-                            _updateState.value = ProfileUpdateState.Error("Failed to reload profile")
+                            null
                         }
-                    } catch (e: Exception) {
-                        Log.e("ProfileViewModel", "Error reloading profile", e)
-                        _updateState.value = ProfileUpdateState.Error("Failed to reload profile")
+
+                        // Get stats
+                        val stats = loadStats()
+
+                        // Update profile state
+                        _profileState.value = ProfileUiState.Success(user, faculty, stats)
+                        Log.d("ProfileViewModel", "✅ Profile reloaded with new faculty: ${faculty?.name}")
+
+                        _updateState.value = ProfileUpdateState.Success
                     }
                 } else {
                     _updateState.value = ProfileUpdateState.Error("Failed to change faculty")
