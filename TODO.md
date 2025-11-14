@@ -32,13 +32,13 @@ TODO
 
 
 
-##### -Non è chiaro come dare il voto a una nota, per me bisogna aggiungere un tastino blu "Rate" sotto alla valutazione DONE
+###### -Non è chiaro come dare il voto a una nota, per me bisogna aggiungere un tastino blu "Rate" sotto alla valutazione DONE
 
+###### 
 
+###### -Nel momento in cui cambio la faculty dal mio Profilo, continua a fare caching dei corsi della facoltà precedente DONE
 
-##### -Nel momento in cui cambio la faculty dal mio Profilo, continua a fare caching dei corsi della facoltà precedente DONE
+###### 
 
-
-
-##### -Nelle "my notes" levare il course id e mettere il nome del corso, levare anche Note #..., mettere solo "Note" DONE
+###### -Nelle "my notes" levare il course id e mettere il nome del corso, levare anche Note #..., mettere solo "Note" DONE
 
