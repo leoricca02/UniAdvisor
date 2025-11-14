@@ -16,7 +16,7 @@ TODO
 
 
 
--Il tasto view note non me la fa visualizzare ma la scarica comunque
+-Il tasto view note non me la fa visualizzare ma la scarica comunque, magari è meglio introdurre, se possibile, una funzionalità per vedere il file e poi decidere se scaricarlo
 
 
 
@@ -32,7 +32,7 @@ TODO
 
 
 
--Non è chiaro come dare il voto a una nota, per me bisogna aggiungere un tastino blu "Rate" sotto alla valutazione
+##### -Non è chiaro come dare il voto a una nota, per me bisogna aggiungere un tastino blu "Rate" sotto alla valutazione DONE
 
 
 
@@ -40,5 +40,5 @@ TODO
 
 
 
--Nelle "my notes" levare il course id e mettere il nome del corso, levare anche Note #..., mettere solo "Note"
+##### -Nelle "my notes" levare il course id e mettere il nome del corso, levare anche Note #..., mettere solo "Note" DONE
 
