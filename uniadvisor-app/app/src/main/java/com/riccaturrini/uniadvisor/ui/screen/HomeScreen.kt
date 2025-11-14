@@ -24,7 +24,7 @@ import java.time.LocalTime
 @Composable
 fun HomeScreen(
     authViewModel: AuthViewModel,
-    profileViewModel: ProfileViewModel = viewModel(),
+    profileViewModel: ProfileViewModel,
     onNavigate: (String) -> Unit = {},
     onLogout: () -> Unit = {}
 ) {

@@ -12,15 +12,19 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.riccaturrini.uniadvisor.ui.components.UniAdvisorBottomBar
 import com.riccaturrini.uniadvisor.viewmodel.AuthViewModel
+import com.riccaturrini.uniadvisor.viewmodel.CourseViewModel
+import com.riccaturrini.uniadvisor.viewmodel.ProfileViewModel
 
 @Composable
 fun DashboardScreen(
     authViewModel: AuthViewModel = viewModel(),
-    onLogout: () -> Unit = {} // ✅ ADDED: Logout callback from MainActivity
+    onLogout: () -> Unit = {}
 ) {
+    val profileViewModel: ProfileViewModel = viewModel()
     val navController = rememberNavController()
+    val courseViewModel: CourseViewModel = viewModel()
 
-    // ✅ Ensure user data is loaded
+    // Ensure user data is loaded
     LaunchedEffect(Unit) {
         if (authViewModel.currentUserData.value == null) {
             authViewModel.checkUserProfile()
@@ -44,20 +48,24 @@ fun DashboardScreen(
         }
     ) { innerPadding ->
         DashboardNavGraph(
+            profileViewModel = profileViewModel,
             navController = navController,
             authViewModel = authViewModel,
-            onLogout = onLogout, // ✅ UPDATED: Pass logout callback
+            courseViewModel = courseViewModel,
+            onLogout = onLogout,
             modifier = Modifier.padding(innerPadding)
         )
     }
 }
 
-// 🔹 Navigation graph inside dashboard
+// Navigation graph inside dashboard
 @Composable
 fun DashboardNavGraph(
+    profileViewModel: ProfileViewModel,
     navController: NavHostController,
     authViewModel: AuthViewModel,
-    onLogout: () -> Unit, // ✅ ADDED: Logout callback
+    courseViewModel: CourseViewModel,
+    onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -67,6 +75,7 @@ fun DashboardNavGraph(
     ) {
         composable("home") {
             HomeScreen(
+                profileViewModel = profileViewModel,
                 authViewModel = authViewModel,
                 onNavigate = { route ->
                     navController.navigate(route) {
@@ -81,7 +90,10 @@ fun DashboardNavGraph(
             )
         }
         composable("faculty") {
-            FacultyScreen(authViewModel = authViewModel)
+            FacultyScreen(
+                authViewModel = authViewModel,
+                courseViewModel = courseViewModel
+            )
         }
         composable("reviews") {
             ReviewsScreen(authViewModel = authViewModel)
@@ -91,7 +103,9 @@ fun DashboardNavGraph(
         }
         composable("profile") {
             ProfileScreen(
+                profileViewModel = profileViewModel,
                 authViewModel = authViewModel,
+                courseViewModel = courseViewModel,
                 onLogout = onLogout,
                 onAccountDeleted = onLogout
             )

@@ -26,6 +26,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.ChevronRight
+import com.riccaturrini.uniadvisor.ui.activity.PdfViewerActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -813,15 +814,10 @@ fun CourseNoteCardWithRating(
                 // View PDF Button
                 Button(
                     onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                            data = Uri.parse(note.file_id)
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        val intent = Intent(context, PdfViewerActivity::class.java).apply {
+                            putExtra("PDF_URL", note.file_id)
                         }
-                        try {
-                            context.startActivity(intent)
-                        } catch (e: Exception) {
-                            // Handle error
-                        }
+                        context.startActivity(intent)
                     },
                     modifier = Modifier.weight(1f)
                 ) {
@@ -831,7 +827,7 @@ fun CourseNoteCardWithRating(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("View PDF")
+                    Text("Preview")
                 }
 
                 // Download Button

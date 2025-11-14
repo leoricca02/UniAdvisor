@@ -21,6 +21,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.riccaturrini.uniadvisor.data.*
 import com.riccaturrini.uniadvisor.viewmodel.*
 import com.riccaturrini.uniadvisor.network.ApiClient
+import com.riccaturrini.uniadvisor.ui.activity.PdfViewerActivity
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -160,15 +161,10 @@ fun NoteDetailScreen(
                             NoteInfoCard(
                                 note = note!!,
                                 onViewPdf = {
-                                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                                        data = Uri.parse(note!!.file_id)
-                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    val intent = Intent(context, PdfViewerActivity::class.java).apply {
+                                        putExtra("PDF_URL", note!!.file_id)
                                     }
-                                    try {
-                                        context.startActivity(intent)
-                                    } catch (e: Exception) {
-                                        Log.e("NoteDetailScreen", "Error opening PDF", e)
-                                    }
+                                    context.startActivity(intent)
                                 }
                             )
                         }
@@ -371,6 +367,7 @@ fun NoteInfoCard(
             }
 
             // View PDF Button
+            // View PDF Button
             Button(
                 onClick = onViewPdf,
                 modifier = Modifier.fillMaxWidth(),
@@ -384,7 +381,7 @@ fun NoteInfoCard(
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("View PDF Document")
+                Text("Preview PDF")
             }
         }
     }

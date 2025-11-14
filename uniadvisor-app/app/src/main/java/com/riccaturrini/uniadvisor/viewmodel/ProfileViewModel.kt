@@ -240,21 +240,55 @@ class ProfileViewModel : ViewModel() {
     }
 
     /**
-     * Cambia la facoltà dell'utente
+     * It changes the faculty of the user
      */
     fun changeFaculty(newFacultyId: Int, courseViewModel: CourseViewModel? = null) {
         viewModelScope.launch {
             _updateState.value = ProfileUpdateState.Loading
 
             try {
+                Log.d("ProfileViewModel", "🔄 Changing faculty to: $newFacultyId")
                 val response = apiService.changeFaculty(newFacultyId)
 
                 if (response.isSuccessful) {
+                    Log.d("ProfileViewModel", "✅ Faculty changed in backend")
+
+                    // Reset courses
                     courseViewModel?.resetCourseList()
 
-                    // Reload profile to get updated faculty
-                    loadProfile()
-                    _updateState.value = ProfileUpdateState.Success
+                    // WAIT for profile to reload BEFORE setting Success
+                    _profileState.value = ProfileUiState.Loading  // Show it's reloading
+
+                    try {
+                        // Get updated user profile
+                        val userResponse = apiService.getMyProfile()
+                        if (userResponse.isSuccessful && userResponse.body() != null) {
+                            val user = userResponse.body()!!
+
+                            // Get updated faculty
+                            val facultyResponse = apiService.getMyFaculty()
+                            val faculty = if (facultyResponse.isSuccessful && facultyResponse.body() != null) {
+                                facultyResponse.body()
+                            } else {
+                                null
+                            }
+
+                            // Get stats
+                            val stats = loadStats()
+
+                            // Update profile state with NEW faculty
+                            _profileState.value = ProfileUiState.Success(user, faculty, stats)
+                            Log.d("ProfileViewModel", "✅ Profile reloaded with new faculty: ${faculty?.name}")
+
+                            // NOW set success (after everything is loaded)
+                            _updateState.value = ProfileUpdateState.Success
+                        } else {
+                            _updateState.value = ProfileUpdateState.Error("Failed to reload profile")
+                        }
+                    } catch (e: Exception) {
+                        Log.e("ProfileViewModel", "Error reloading profile", e)
+                        _updateState.value = ProfileUpdateState.Error("Failed to reload profile")
+                    }
                 } else {
                     _updateState.value = ProfileUpdateState.Error("Failed to change faculty")
                 }

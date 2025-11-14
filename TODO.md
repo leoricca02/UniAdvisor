@@ -16,7 +16,7 @@ TODO
 
 
 
--Il tasto view note non me la fa visualizzare ma la scarica comunque, magari è meglio introdurre, se possibile, una funzionalità per vedere il file e poi decidere se scaricarlo
+###### -Il tasto view note non me la fa visualizzare ma la scarica comunque, magari è meglio introdurre, se possibile, una funzionalità per vedere il file e poi decidere se scaricarlo DONE
 
 
 

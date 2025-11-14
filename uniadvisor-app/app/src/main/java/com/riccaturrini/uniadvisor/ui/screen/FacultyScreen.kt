@@ -23,7 +23,8 @@ import com.riccaturrini.uniadvisor.ui.screen.NoteDetailScreen
 
 @Composable
 fun FacultyScreen(
-    authViewModel: AuthViewModel
+    authViewModel: AuthViewModel,
+    courseViewModel: CourseViewModel = viewModel()
 ) {
     val courseViewModel: CourseViewModel = viewModel()
 
@@ -33,7 +34,7 @@ fun FacultyScreen(
     val courseListState by courseViewModel.courseListState.collectAsState()
     val currentUserData by authViewModel.currentUserData.collectAsState()
 
-    // ✅ Log per vedere quando lo stato cambia
+    // Log to see the state changes
     LaunchedEffect(courseListState) {
         Log.d("FacultyScreen", "🔄 courseListState CHANGED to: ${courseListState::class.simpleName}")
         when (courseListState) {
@@ -59,24 +60,11 @@ fun FacultyScreen(
 
     LaunchedEffect(currentUserData) {
         Log.d("FacultyScreen", "🔄 Screen opened - Reloading user profile")
-        Log.d("FacultyScreen", "LaunchedEffect triggered - currentUserData: $currentUserData")
-
         currentUserData?.let { userData ->
-            Log.d("FacultyScreen", "User data found:")
-            Log.d("FacultyScreen", "   - faculty_id: ${userData.faculty_id}")
-            Log.d(
-                "FacultyScreen",
-                "   - faculty_name: ${userData.faculty_name}"
-            ) // ✅ Verifica questo!
-
             userData.faculty_id?.let { facultyId ->
                 Log.d("FacultyScreen", "✅ Loading courses for faculty: $facultyId")
-                courseViewModel.loadCoursesByFaculty(facultyId)
-            } ?: run {
-                Log.d("FacultyScreen", "⚠️ User has no faculty_id")
+                courseViewModel.loadCoursesByFaculty(facultyId, forceReload = true)
             }
-        } ?: run {
-            Log.d("FacultyScreen", "⚠️ currentUserData is null")
         }
     }
 

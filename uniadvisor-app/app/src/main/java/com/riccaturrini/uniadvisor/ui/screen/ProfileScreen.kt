@@ -25,7 +25,8 @@ import com.riccaturrini.uniadvisor.viewmodel.CourseViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    profileViewModel: ProfileViewModel = viewModel(),
+    profileViewModel: ProfileViewModel,
+    courseViewModel: CourseViewModel,
     onLogout: () -> Unit = {},
     onAccountDeleted: () -> Unit = {},
     authViewModel: AuthViewModel
@@ -41,15 +42,17 @@ fun ProfileScreen(
         profileViewModel.loadProfile()
     }
 
-    // Gestione effetti collaterali
+    // to update profile state
     LaunchedEffect(updateState) {
         when (updateState) {
             is ProfileUpdateState.Success -> {
+                // RELOAD PROFILE FIRST, THEN close dialog
+                profileViewModel.loadProfile()
                 profileViewModel.resetUpdateState()
                 showEditDialog = false
                 showChangeFacultyDialog = false
             }
-            else -> {}
+            else -> Unit
         }
     }
 
@@ -170,10 +173,11 @@ fun ProfileScreen(
                 )
             }
 
-            // Dialog cambio facoltà
             if (showChangeFacultyDialog) {
                 ChangeFacultyDialog(
                     viewModel = profileViewModel,
+                    courseViewModel = courseViewModel,
+                    authViewModel = authViewModel,
                     onDismiss = { showChangeFacultyDialog = false },
                     isLoading = updateState is ProfileUpdateState.Loading
                 )
@@ -548,8 +552,10 @@ fun EditProfileDialog(
 @Composable
 fun ChangeFacultyDialog(
     viewModel: ProfileViewModel,
+    courseViewModel: CourseViewModel,
     onDismiss: () -> Unit,
-    isLoading: Boolean
+    isLoading: Boolean,
+    authViewModel: AuthViewModel,
 ) {
     val faculties by viewModel.faculties.collectAsState()
     var selectedFacultyId by remember { mutableStateOf<Int?>(null) }
@@ -605,7 +611,7 @@ fun ChangeFacultyDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    selectedFacultyId?.let { viewModel.changeFaculty(it) }
+                    selectedFacultyId?.let { viewModel.changeFaculty(it, courseViewModel) }
                 },
                 enabled = !isLoading && selectedFacultyId != null
             ) {

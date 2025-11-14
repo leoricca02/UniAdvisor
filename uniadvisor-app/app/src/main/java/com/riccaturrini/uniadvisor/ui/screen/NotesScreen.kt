@@ -23,6 +23,7 @@ import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.riccaturrini.uniadvisor.data.Course
 import com.riccaturrini.uniadvisor.data.Note
+import com.riccaturrini.uniadvisor.ui.activity.PdfViewerActivity
 import com.riccaturrini.uniadvisor.viewmodel.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -289,14 +290,16 @@ fun NoteCard(
             ) {
                 OutlinedButton(
                     onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(note.file_id))  // ✅ CORRETTO
+                        val intent = Intent(context, PdfViewerActivity::class.java).apply {
+                            putExtra("PDF_URL", note.file_id)
+                        }
                         context.startActivity(intent)
                     },
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("View PDF")
+                    Text("Preview")
                 }
 
                 OutlinedButton(
