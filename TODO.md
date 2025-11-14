@@ -42,3 +42,53 @@ TODO
 
 ###### -Nelle "my notes" levare il course id e mettere il nome del corso, levare anche Note #..., mettere solo "Note" DONE
 
+
+
+-Camera + OCR (1-2 days)
+
+1\. Add CameraX for photo capture
+
+2\. Integrate ML Kit Text Recognition
+
+3\. Create OCR preview screen
+
+4\. Generate searchable PDF from extracted text
+
+5\. Upload to Firebase Storage
+
+
+
+-Sensors
+
+1\. Add shake detection for refresh
+
+2\. Implement tilt-based navigation (optional)
+
+3\. Add haptic feedback
+
+
+
+-Position: 
+
+1\. Interactive Campus Map 🗺️
+
+&nbsp;	Display all faculty departments on a map
+
+&nbsp;	Show course room locations with pins
+
+&nbsp;	Tap on a pin to see course details
+
+&nbsp;	Filter by faculty or course
+
+2\. Navigate to Class 🧭
+
+&nbsp;	"Navigate to this course" button on CourseDetailScreen
+
+&nbsp;	Calculate distance from current location to classroom
+
+&nbsp;	Estimate walking time
+
+&nbsp;	Open Google Maps/Waze for turn-by-turn navigation
+
+&nbsp;	Show building entrance and room number
+
