@@ -142,6 +142,12 @@ fun UniAdvisorApp() {
                 }
             )
         }
+
+        composable("location_test") {
+            LocationTestScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
     }
 
 }
