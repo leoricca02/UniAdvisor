@@ -6,6 +6,8 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.*
 import java.util.concurrent.TimeUnit
+import retrofit2.Response
+
 
 interface ApiService {
     // User endpoints
@@ -76,7 +78,7 @@ interface ApiService {
     @GET("notes/{course_id}")
     suspend fun getNotesByCourse(@Path("course_id") courseId: Int): retrofit2.Response<List<Note>>
 
-    // ✅ NEW: Note rating endpoints
+    // Note rating endpoints
     @GET("notes/{course_id}/notes-sorted")
     suspend fun getNotesWithRatings(
         @Path("course_id") courseId: Int,
@@ -103,6 +105,45 @@ interface ApiService {
 
     @GET("notes/notes/{note_id}/reviews")
     suspend fun getNoteReviews(@Path("note_id") noteId: Int): retrofit2.Response<List<NoteRating>>
+
+    // ============================================
+    // ✅ NEW: LOCATION & MAP ENDPOINTS
+    // ============================================
+
+    @GET("location/faculties/map")
+    suspend fun getFacultiesForMap(): Response<List<FacultyMapMarker>>
+
+    @GET("location/faculties/{faculty_id}/location")
+    suspend fun getFacultyLocation(
+        @Path("faculty_id") facultyId: Int
+    ): Response<FacultyMapMarker>
+
+    @GET("location/courses/map")
+    suspend fun getCoursesForMap(
+        @Query("faculty_id") facultyId: Int? = null
+    ): Response<List<CourseMapMarker>>
+
+    @GET("location/courses/{course_id}/location")
+    suspend fun getCourseLocation(
+        @Path("course_id") courseId: Int,
+        @Query("user_latitude") userLatitude: Double? = null,
+        @Query("user_longitude") userLongitude: Double? = null
+    ): Response<CourseLocation>
+
+    @GET("location/courses/nearby")
+    suspend fun getNearbyCourses(
+        @Query("latitude") latitude: Double,
+        @Query("longitude") longitude: Double,
+        @Query("radius_meters") radiusMeters: Double = 1000.0,
+        @Query("faculty_id") facultyId: Int? = null
+    ): Response<NearbyCourses>
+
+    @GET("location/navigate/{course_id}")
+    suspend fun getNavigationInfo(
+        @Path("course_id") courseId: Int,
+        @Query("user_latitude") userLatitude: Double,
+        @Query("user_longitude") userLongitude: Double
+    ): Response<NavigationInfo>
 }
 
 /**

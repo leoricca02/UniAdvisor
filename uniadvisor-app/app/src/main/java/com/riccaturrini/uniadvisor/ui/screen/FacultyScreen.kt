@@ -84,11 +84,14 @@ fun FacultyScreen(
                     currentUserData?.faculty_id?.let { facultyId ->
                         courseViewModel.loadCoursesByFaculty(facultyId)
                     }
+                },
+                onNavigateToLocationTest = {
+                    navController.navigate("location_test")
                 }
             )
         }
 
-        // ✅ MODIFICATO: Aggiunto onNavigateToNoteDetail
+        // Added onNavigateToNoteDetail
         composable("course_detail/{courseId}") { backStackEntry ->
             val courseId = backStackEntry.arguments?.getString("courseId")?.toIntOrNull()
             if (courseId != null) {
@@ -102,7 +105,7 @@ fun FacultyScreen(
             }
         }
 
-        // ✅ NUOVO: Route per NoteDetailScreen
+        // Route for NoteDetailScreen
         composable("note_detail/{courseId}/{noteId}") { backStackEntry ->
             val courseId = backStackEntry.arguments?.getString("courseId")?.toIntOrNull()
             val noteId = backStackEntry.arguments?.getString("noteId")?.toIntOrNull()
@@ -115,6 +118,11 @@ fun FacultyScreen(
                 )
             }
         }
+        composable("location_test") {
+            LocationTestScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
     }
 }
 
@@ -125,6 +133,7 @@ fun FacultyMainScreen(
     facultyId: Int?,
     facultyName: String?,
     onCourseClick: (Int) -> Unit,
+    onNavigateToLocationTest: () -> Unit,
     onRefresh: () -> Unit
 ) {
     Log.d("FacultyMainScreen", "🎨 Composing FacultyMainScreen")
@@ -148,7 +157,7 @@ fun FacultyMainScreen(
                         Icon(Icons.Default.FilterList, contentDescription = "Sort courses")
                     }
 
-                    // Menu ordinamento
+                    // Menu for sorting courses
                     DropdownMenu(
                         expanded = showCourseSortMenu,
                         onDismissRequest = { showCourseSortMenu = false }
@@ -208,6 +217,13 @@ fun FacultyMainScreen(
                     }
                 }
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onNavigateToLocationTest
+            ) {
+                Icon(Icons.Default.Map, "Test Location")
+            }
         }
     ) { paddingValues ->
         when {
@@ -326,7 +342,7 @@ fun FacultyMainScreen(
                 } else {
                     Log.d("FacultyMainScreen", "📚 About to render LazyColumn with ${courses.size} courses")
 
-                    // ✅ ORDINA i corsi in base a courseSortOrder
+                    // sort courses based on courseSortOrder
                     val sortedCourses = remember(courses, courseSortOrder) {
                         when (courseSortOrder) {
                             "name_asc" -> courses.sortedBy { it.course.name }
@@ -351,7 +367,6 @@ fun FacultyMainScreen(
                         items(sortedCourses) { courseWithRatings ->
                             Log.d("FacultyMainScreen", "🎓 Rendering course: ${courseWithRatings.course.name}")
 
-                            // ✅ USA la funzione CourseCard da CoursesListScreen.kt
                             CourseCard(
                                 courseName = courseWithRatings.course.name,
                                 teacherName = courseWithRatings.teacherName,

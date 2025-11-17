@@ -1,6 +1,9 @@
 // file: data/models.kt
 package com.riccaturrini.uniadvisor.data
 
+import com.google.gson.annotations.SerializedName
+
+
 // Corrisponde a schemas/user.py -> UserProfileCreate
 data class UserProfileCreate(
     val first_name: String,
@@ -26,15 +29,29 @@ data class UserResponse(
 // Corrisponde al modello Faculty del backend
 data class Faculty(
     val id: Int,
-    val name: String
+    val name: String,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val address: String? = null,
+    @SerializedName("building_name")
+    val buildingName: String? = null
 )
 
 // Per le risposte dei corsi con teacher
 data class Course(
     val id: Int,
     val name: String,
-    val faculty_id: Int,
-    val teacher_id: Int
+    @SerializedName("faculty_id")
+    val facultyId: Int,
+    @SerializedName("teacher_id")
+    val teacherId: Int?,
+    @SerializedName("room_number")
+    val roomNumber: String? = null,
+    @SerializedName("building_name")
+    val buildingName: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val floor: Int? = null
 )
 
 // Per le recensioni
