@@ -68,7 +68,7 @@ TODO
 
 
 
--Position: 
+-Position
 
 1\. Interactive Campus Map 🗺️
 
@@ -91,4 +91,20 @@ TODO
 &nbsp;	Open Google Maps/Waze for turn-by-turn navigation
 
 &nbsp;	Show building entrance and room number
+
+
+
+-Mettere tasto "Browse faculties", come funzionalità extra, per esplorare le altre facoltà senza dover cambiare la facoltà dal "Profilo"
+
+
+
+-Mettere stelline di media del voto al posto del voto nella schermata "Faculty" che mostra tutti i corsi
+
+
+
+-Aggiungere la possibilità di vedere anche la "mezza stellina"
+
+
+
+-Aggiungere l'obbligo di vedere il nome di chi ha caricato la nota
 
