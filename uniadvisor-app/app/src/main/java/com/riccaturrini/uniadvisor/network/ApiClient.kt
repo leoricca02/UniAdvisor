@@ -112,6 +112,7 @@ interface ApiService {
 object ApiClient {
     // URL del backend - usa 10.0.2.2 per l'emulatore Android
     private const val BASE_URL = "https://uniadvisor-backend-5mop.onrender.com/"
+    //private const val BASE_URL = "http://10.0.2.2:8000"
 
     // Configurazione OkHttpClient con timeout estesi e AuthInterceptor
     private val okHttpClient = OkHttpClient.Builder()

@@ -72,25 +72,25 @@ TODO
 
 1\. Interactive Campus Map 🗺️
 
-&nbsp;	Display all faculty departments on a map
+ 	Display all faculty departments on a map
 
-&nbsp;	Show course room locations with pins
+ 	Show course room locations with pins
 
-&nbsp;	Tap on a pin to see course details
+ 	Tap on a pin to see course details
 
-&nbsp;	Filter by faculty or course
+ 	Filter by faculty or course
 
 2\. Navigate to Class 🧭
 
-&nbsp;	"Navigate to this course" button on CourseDetailScreen
+ 	"Navigate to this course" button on CourseDetailScreen
 
-&nbsp;	Calculate distance from current location to classroom
+ 	Calculate distance from current location to classroom
 
-&nbsp;	Estimate walking time
+ 	Estimate walking time
 
-&nbsp;	Open Google Maps/Waze for turn-by-turn navigation
+ 	Open Google Maps/Waze for turn-by-turn navigation
 
-&nbsp;	Show building entrance and room number
+ 	Show building entrance and room number
 
 
 
@@ -107,4 +107,28 @@ TODO
 
 
 -Aggiungere l'obbligo di vedere il nome di chi ha caricato la nota
+
+
+
+-Coerenza con rating vicino alle stelline in tutti i punti dell'app (1.5 e non 1.5/5)
+
+
+
+-In my reviews, mettere nome corso e non "Course #1"
+
+
+
+-In course ratings, dentro a course details, mettere i numeri vicino alle stelline in grassetto
+
+
+
+-Aggiungere una matita per editare, ed eventualmente cancellare, le proprie note reviews
+
+
+
+-rimuovere i timestamp dalle cose caricate, lasciare solo la data
+
+
+
+-Mettere i colori nelle note, quindi rosso se è basso, giallo se nella media, verde se è top.
 

@@ -14,6 +14,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.riccaturrini.uniadvisor.viewmodel.CourseListState
 import com.riccaturrini.uniadvisor.viewmodel.CourseViewModel
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarHalf
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -158,15 +163,65 @@ fun CourseCard(
 }
 
 @Composable
+fun StarRating(rating: Double, starSize: Int = 18) {
+    val gold = Color(0xFFFFD700)
+    val fullStars = rating.toInt()
+    val hasHalfStar = (rating - fullStars) >= 0.5
+    val emptyStars = 5 - fullStars - if (hasHalfStar) 1 else 0
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+
+        // ⭐ stelle piene (oro)
+        repeat(fullStars) {
+            Icon(
+                imageVector = Icons.Filled.Star,
+                contentDescription = null,
+                tint = gold,
+                modifier = Modifier.size(starSize.dp)
+            )
+        }
+
+        // ⯨ mezza stella (oro)
+        if (hasHalfStar) {
+            Icon(
+                imageVector = Icons.Filled.StarHalf,
+                contentDescription = null,
+                tint = gold,
+                modifier = Modifier.size(starSize.dp)
+            )
+        }
+
+        // ☆ stelle vuote (BORDO NERO)
+        repeat(emptyStars) {
+            Icon(
+                imageVector = Icons.Filled.StarBorder, // ⭐ stessa icona
+                contentDescription = null,
+                tint = Color.Black,                    // ⬅⬅⬅ BORDO NERO
+                modifier = Modifier.size(starSize.dp)
+            )
+        }
+    }
+}
+
+
+@Composable
 fun RatingChip(label: String, rating: Double) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // Label NON in grassetto
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall
         )
+
+        // Solo il valore numerico in grassetto
         Text(
             text = if (rating > 0) String.format("%.1f", rating) else "N/A",
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyMedium.copy(
+                fontWeight = FontWeight.Bold
+            ),
             color = when {
                 rating >= 4.0 -> MaterialTheme.colorScheme.primary
                 rating >= 2.5 -> MaterialTheme.colorScheme.tertiary
@@ -174,5 +229,12 @@ fun RatingChip(label: String, rating: Double) {
                 else -> MaterialTheme.colorScheme.onSurfaceVariant
             }
         )
+
+        Spacer(modifier = Modifier.height(2.dp))
+
+        // ⭐⭐⭐ Stelline stile B (con mezza stella)
+        if (rating > 0) {
+            StarRating(rating = rating, starSize = 16)
+        }
     }
 }
