@@ -146,3 +146,11 @@ TODO
 
 -feature aggiuntiva: inserire una barra di ricerca per cercare i corsi
 
+
+
+-testare shake features
+
+
+
+-modificare la "course page" --> è sviluppata troppo verticalmente, aggiungere due shortcut dopo gli average rating del corso "See Course Reviews" e "See Course Notes"
+

@@ -24,6 +24,16 @@ data class CourseLocation(
     val walkingTimeMinutes: Int? = null
 )
 
+data class FacultyLocation(
+    val id: Int,
+    val name: String,
+    val latitude: Double?,
+    val longitude: Double?,
+    val address: String?,
+    @SerializedName("building_name")
+    val buildingName: String?
+)
+
 data class NavigationInfo(
     @SerializedName("course_id")
     val courseId: Int,

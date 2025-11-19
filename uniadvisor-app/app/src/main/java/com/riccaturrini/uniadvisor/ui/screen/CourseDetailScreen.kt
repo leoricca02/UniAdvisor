@@ -27,6 +27,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.ChevronRight
 import com.riccaturrini.uniadvisor.ui.activity.PdfViewerActivity
+import androidx.compose.ui.platform.LocalContext
+import com.riccaturrini.uniadvisor.utils.openGoogleMaps
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -216,6 +218,17 @@ fun CourseDetailScreen(
                             CourseInfoCard(
                                 courseName = data.course.name,
                                 teacherName = data.teacherName
+                            )
+                        }
+
+                        item {
+                            LocationInfoCard(
+                                buildingName = data.course.buildingName,
+                                roomNumber = data.course.roomNumber,
+                                floor = data.course.floor,
+                                latitude = data.course.latitude,
+                                longitude = data.course.longitude,
+                                courseName = data.course.name
                             )
                         }
 
@@ -899,6 +912,7 @@ fun CourseInfoCard(
     courseName: String,
     teacherName: String
 ) {
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -1319,6 +1333,130 @@ fun CourseNoteCard(
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun LocationInfoCard(
+    buildingName: String?,
+    roomNumber: String?,
+    floor: Int?,
+    latitude: Double?,
+    longitude: Double?,
+    courseName: String
+) {
+    val context = LocalContext.current
+    val hasLocation = latitude != null && longitude != null
+    val hasInfo = buildingName != null || roomNumber != null || floor != null
+
+    if (!hasInfo && !hasLocation) return
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.LocationOn,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "Location",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            // Building info
+            if (buildingName != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Business,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "Building: $buildingName",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+            // Floor info
+            if (floor != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Stairs,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "Floor: $floor",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+            // Room info
+            if (roomNumber != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MeetingRoom,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "Room: $roomNumber",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+            // Map button
+            if (hasLocation) {
+                Button(
+                    onClick = {
+                        openGoogleMaps(
+                            context = context,
+                            latitude = latitude!!,
+                            longitude = longitude!!,
+                            label = courseName
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Map,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Open in Google Maps")
+                }
             }
         }
     }

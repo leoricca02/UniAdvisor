@@ -21,6 +21,13 @@ import com.riccaturrini.uniadvisor.viewmodel.CourseListState
 import com.riccaturrini.uniadvisor.viewmodel.CourseViewModel
 import com.riccaturrini.uniadvisor.ui.screen.NoteDetailScreen
 import com.riccaturrini.uniadvisor.utils.rememberShakeDetector
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
+import com.riccaturrini.uniadvisor.utils.openGoogleMaps
+import androidx.compose.ui.platform.LocalContext
+import com.riccaturrini.uniadvisor.utils.openGoogleMaps
+import com.riccaturrini.uniadvisor.network.ApiClient
+
 
 @Composable
 fun FacultyScreen(
@@ -34,6 +41,17 @@ fun FacultyScreen(
     val navController = rememberNavController()
     val courseListState by courseViewModel.courseListState.collectAsState()
     val currentUserData by authViewModel.currentUserData.collectAsState()
+    var facultyLatitude by remember { mutableStateOf<Double?>(null) }
+    var facultyLongitude by remember { mutableStateOf<Double?>(null) }
+    var facultyBuildingName by remember { mutableStateOf<String?>(null) }
+
+    // Load faculty location when faculty ID changes
+    LaunchedEffect(currentUserData?.faculty_id) {
+        currentUserData?.faculty_id?.let { facultyId ->
+            // You can get this from the API or from a cached faculty list
+            // For now, we'll use the data from currentUserData if available
+        }
+    }
 
     // Log to see the state changes
     LaunchedEffect(courseListState) {
@@ -59,6 +77,28 @@ fun FacultyScreen(
         }
     }
 
+
+    LaunchedEffect(currentUserData?.faculty_id) {
+        currentUserData?.faculty_id?.let { facultyId ->
+            try {
+                Log.d("FacultyScreen", "📍 Fetching location for faculty: $facultyId")
+                val response = ApiClient.instance.getFacultyLocation(facultyId)
+                if (response.isSuccessful) {
+                    response.body()?.let { facultyLocation ->
+                        facultyLatitude = facultyLocation.latitude
+                        facultyLongitude = facultyLocation.longitude
+                        facultyBuildingName = facultyLocation.buildingName
+                        Log.d("FacultyScreen", "✅ Faculty location loaded: $facultyLatitude, $facultyLongitude")
+                    }
+                } else {
+                    Log.e("FacultyScreen", "❌ Failed to load faculty location: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e("FacultyScreen", "❌ Error fetching faculty location", e)
+            }
+        }
+    }
+
     LaunchedEffect(currentUserData) {
         Log.d("FacultyScreen", "🔄 Screen opened - Reloading user profile")
         currentUserData?.let { userData ->
@@ -77,6 +117,8 @@ fun FacultyScreen(
             FacultyMainScreen(
                 courseListState = courseListState,
                 facultyId = currentUserData?.faculty_id,
+                facultyLatitude = facultyLatitude,
+                facultyLongitude = facultyLongitude,
                 facultyName = currentUserData?.faculty_name,
                 onCourseClick = { courseId ->
                     navController.navigate("course_detail/$courseId")
@@ -85,9 +127,6 @@ fun FacultyScreen(
                     currentUserData?.faculty_id?.let { facultyId ->
                         courseViewModel.loadCoursesByFaculty(facultyId)
                     }
-                },
-                onNavigateToLocationTest = {
-                    navController.navigate("location")
                 }
             )
         }
@@ -119,14 +158,6 @@ fun FacultyScreen(
                 )
             }
         }
-        composable("location") {
-            CampusMapScreen(
-                onNavigateBack = { navController.popBackStack() },
-                onCourseSelected = { courseId ->
-                    navController.navigate("course_detail/$courseId")
-                }
-            )
-        }
     }
 }
 
@@ -136,8 +167,9 @@ fun FacultyMainScreen(
     courseListState: CourseListState,
     facultyId: Int?,
     facultyName: String?,
+    facultyLatitude: Double?,
+    facultyLongitude: Double?,
     onCourseClick: (Int) -> Unit,
-    onNavigateToLocationTest: () -> Unit,
     onRefresh: () -> Unit
 ) {
     Log.d("FacultyMainScreen", "🎨 Composing FacultyMainScreen")
@@ -146,6 +178,7 @@ fun FacultyMainScreen(
 
     var courseSortOrder by remember { mutableStateOf("name_asc") } // name_asc, name_desc, rating_desc, rating_asc
     var showCourseSortMenu by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     // Shake to refresh
     val shakeDetector = rememberShakeDetector {
@@ -162,6 +195,26 @@ fun FacultyMainScreen(
                     containerColor = MaterialTheme.colorScheme.primaryContainer
                 ),
                 actions = {
+                    // Map button - only show if location is available
+                    if (facultyLatitude != null && facultyLongitude != null) {
+                        IconButton(
+                            onClick = {
+                                openGoogleMaps(
+                                    context = context,
+                                    latitude = facultyLatitude,
+                                    longitude = facultyLongitude,
+                                    label = facultyName
+                                )
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Map,
+                                contentDescription = "Open in Maps"
+                            )
+                        }
+                    }
+
+                    // Sort button
                     IconButton(onClick = { showCourseSortMenu = true }) {
                         Icon(Icons.Default.FilterList, contentDescription = "Sort courses")
                     }
@@ -226,13 +279,6 @@ fun FacultyMainScreen(
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToLocationTest
-            ) {
-                Icon(Icons.Default.Map, "Test Location")
-            }
         }
     ) { paddingValues ->
         when {
