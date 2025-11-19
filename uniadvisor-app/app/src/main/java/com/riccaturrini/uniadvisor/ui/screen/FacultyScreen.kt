@@ -140,7 +140,36 @@ fun FacultyScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToNoteDetail = { noteId ->
                         navController.navigate("note_detail/$courseId/$noteId")
+                    },
+                    onNavigateToCourseNotes = { id ->
+                        navController.navigate("course_notes/$id")
+                    },
+                    onNavigateToCourseReviews = { id ->
+                        navController.navigate("course_reviews/$id")
                     }
+                )
+            }
+        }
+
+        composable("course_notes/{courseId}") { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId")?.toIntOrNull()
+            if (courseId != null) {
+                CourseNotesScreen(
+                    courseId = courseId,
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToNoteDetail = { noteId ->
+                        navController.navigate("note_detail/$courseId/$noteId")
+                    }
+                )
+            }
+        }
+
+        composable("course_reviews/{courseId}") { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId")?.toIntOrNull()
+            if (courseId != null) {
+                CourseReviewsScreen(
+                    courseId = courseId,
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
         }

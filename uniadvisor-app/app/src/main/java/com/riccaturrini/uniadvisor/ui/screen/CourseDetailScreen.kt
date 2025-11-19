@@ -27,7 +27,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.ChevronRight
 import com.riccaturrini.uniadvisor.ui.activity.PdfViewerActivity
-import androidx.compose.ui.platform.LocalContext
 import com.riccaturrini.uniadvisor.utils.openGoogleMaps
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,6 +35,8 @@ fun CourseDetailScreen(
     courseId: Int,
     onNavigateBack: () -> Unit,
     onNavigateToNoteDetail: (noteId: Int) -> Unit,
+    onNavigateToCourseNotes: (courseId: Int) -> Unit,
+    onNavigateToCourseReviews: (courseId: Int) -> Unit,
     viewModel: CourseDetailViewModel = viewModel()
 ) {
     val courseState by viewModel.courseDetailState.collectAsState()
@@ -47,18 +48,10 @@ fun CourseDetailScreen(
     var showActionMenu by remember { mutableStateOf(false) }
 
     var noteSortOrder by remember { mutableStateOf("desc") }
-    var showNoteSortMenu by remember { mutableStateOf(false) }
 
-    var reviewSortOrder by remember { mutableStateOf("date_desc") }
-    var showReviewSortMenu by remember { mutableStateOf(false) }
     // Load course details on start
     LaunchedEffect(courseId) {
         viewModel.loadCourseDetail(courseId)
-    }
-
-    // Load course details on note sort order change
-    LaunchedEffect(noteSortOrder) {
-        viewModel.loadCourseDetail(courseId, noteSortOrder)
     }
 
     // Handle review added successfully
@@ -74,15 +67,9 @@ fun CourseDetailScreen(
 
         if (noteRatingState is NoteRatingState.Success) {
             Log.d("CourseDetailScreen", "✅ Note rating success - will reload after delay")
-
-            // ✅ Aspetta un attimo per permettere al backend di aggiornare
-            kotlinx.coroutines.delay(1000) // 1 secondo di delay
-
-            // ✅ Ricarica i dati del corso
+            kotlinx.coroutines.delay(1000)
             Log.d("CourseDetailScreen", "🔄 Calling loadCourseDetail for course $courseId")
             viewModel.loadCourseDetail(courseId)
-
-            // ✅ Resetta lo stato
             Log.d("CourseDetailScreen", "🔄 Resetting note rating state")
             viewModel.resetNoteRatingState()
         }
@@ -110,7 +97,7 @@ fun CourseDetailScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     if (showActionMenu) {
-                        // Opzione: Upload Note
+                        // Upload Note
                         SmallFloatingActionButton(
                             onClick = {
                                 showActionMenu = false
@@ -128,7 +115,7 @@ fun CourseDetailScreen(
                             }
                         }
 
-                        // Opzione: Add Review
+                        // Add Review
                         SmallFloatingActionButton(
                             onClick = {
                                 showActionMenu = false
@@ -241,176 +228,74 @@ fun CourseDetailScreen(
                             )
                         }
 
-                        // Notes Section Header
+                        // Navigation buttons for Notes and Reviews
                         item {
-                            Row(
+                            Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                             ) {
-                                Text(
-                                    text = "Course Notes (${data.notes.size})",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Box {
-                                    IconButton(onClick = { showNoteSortMenu = true }) {
-                                        Icon(
-                                            imageVector = Icons.Default.FilterList,
-                                            contentDescription = "Sort notes"
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    // Course Notes Button
+                                    Button(
+                                        onClick = { onNavigateToCourseNotes(courseId) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                                         )
-                                    }
-
-                                    DropdownMenu(
-                                        expanded = showNoteSortMenu,
-                                        onDismissRequest = { showNoteSortMenu = false }
                                     ) {
-                                        DropdownMenuItem(
-                                            text = { Text("⭐ Best rated first") },
-                                            onClick = {
-                                                noteSortOrder = "desc"
-                                                showNoteSortMenu = false
-                                            },
-                                            leadingIcon = {
-                                                if (noteSortOrder == "desc") {
-                                                    Icon(Icons.Default.Check, contentDescription = null)
-                                                }
-                                            }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text("⭐ Worst rated first") },
-                                            onClick = {
-                                                noteSortOrder = "asc"
-                                                showNoteSortMenu = false
-                                            },
-                                            leadingIcon = {
-                                                if (noteSortOrder == "asc") {
-                                                    Icon(Icons.Default.Check, contentDescription = null)
-                                                }
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        // Notes List
-                        if (data.notes.isEmpty()) {
-                            item {
-                                EmptyCourseNotesCard()
-                            }
-                        } else {
-                            items(data.notes) { note ->
-                                CourseNoteCard(
-                                    note = note,
-                                    onNoteClick = {
-                                        onNavigateToNoteDetail(note.id)
-                                    }
-                                )
-                            }
-                        }
-
-                        // Reviews Section Header
-                        item {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Reviews (${data.reviews.size})",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(top = 8.dp)
-                                )
-
-                                // ✅ Bottone ordinamento recensioni
-                                Box {
-                                    IconButton(onClick = { showReviewSortMenu = true }) {
                                         Icon(
-                                            imageVector = Icons.Default.FilterList,
-                                            contentDescription = "Sort reviews"
+                                            imageVector = Icons.Default.Description,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "See Course Notes (${data.notes.size})",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Spacer(modifier = Modifier.weight(1f))
+                                        Icon(
+                                            imageVector = Icons.Default.ChevronRight,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
                                         )
                                     }
 
-                                    DropdownMenu(
-                                        expanded = showReviewSortMenu,
-                                        onDismissRequest = { showReviewSortMenu = false }
+                                    // Course Reviews Button
+                                    Button(
+                                        onClick = { onNavigateToCourseReviews(courseId) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                        )
                                     ) {
-                                        DropdownMenuItem(
-                                            text = { Text("🕐 Newest first") },
-                                            onClick = {
-                                                reviewSortOrder = "date_desc"
-                                                showReviewSortMenu = false
-                                            },
-                                            leadingIcon = {
-                                                if (reviewSortOrder == "date_desc") {
-                                                    Icon(Icons.Default.Check, contentDescription = null)
-                                                }
-                                            }
+                                        Icon(
+                                            imageVector = Icons.Default.RateReview,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
                                         )
-                                        DropdownMenuItem(
-                                            text = { Text("🕐 Oldest first") },
-                                            onClick = {
-                                                reviewSortOrder = "date_asc"
-                                                showReviewSortMenu = false
-                                            },
-                                            leadingIcon = {
-                                                if (reviewSortOrder == "date_asc") {
-                                                    Icon(Icons.Default.Check, contentDescription = null)
-                                                }
-                                            }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "See Course Reviews (${data.reviews.size})",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
                                         )
-                                        DropdownMenuItem(
-                                            text = { Text("⭐ Highest rated") },
-                                            onClick = {
-                                                reviewSortOrder = "rating_desc"
-                                                showReviewSortMenu = false
-                                            },
-                                            leadingIcon = {
-                                                if (reviewSortOrder == "rating_desc") {
-                                                    Icon(Icons.Default.Check, contentDescription = null)
-                                                }
-                                            }
-                                        )
-                                        DropdownMenuItem(
-                                            text = { Text("⭐ Lowest rated") },
-                                            onClick = {
-                                                reviewSortOrder = "rating_asc"
-                                                showReviewSortMenu = false
-                                            },
-                                            leadingIcon = {
-                                                if (reviewSortOrder == "rating_asc") {
-                                                    Icon(Icons.Default.Check, contentDescription = null)
-                                                }
-                                            }
+                                        Spacer(modifier = Modifier.weight(1f))
+                                        Icon(
+                                            imageVector = Icons.Default.ChevronRight,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
                                         )
                                     }
                                 }
-                            }
-                        }
-
-                        // Reviews List
-                        if (data.reviews.isEmpty()) {
-                            item {
-                                EmptyCourseReviewsCard()
-                            }
-                        } else {
-                            // ✅ Calcola le recensioni ordinate
-                            val sortedReviews = when (reviewSortOrder) {
-                                "date_desc" -> data.reviews.sortedByDescending { it.created_at }
-                                "date_asc" -> data.reviews.sortedBy { it.created_at }
-                                "rating_desc" -> data.reviews.sortedByDescending {
-                                    (it.rating_clarity + it.rating_feasibility + it.rating_availability) / 3.0
-                                }
-                                "rating_asc" -> data.reviews.sortedBy {
-                                    (it.rating_clarity + it.rating_feasibility + it.rating_availability) / 3.0
-                                }
-                                else -> data.reviews
-                            }
-
-                            items(sortedReviews) { review ->
-                                CourseReviewCard(review = review)
                             }
                         }
 
@@ -430,7 +315,6 @@ fun CourseDetailScreen(
                     },
                     onSuccess = {
                         showUploadNoteDialog = false
-                        // Ricarica i dati del corso per mostrare la nuova nota
                         viewModel.loadCourseDetail(courseId, noteSortOrder)
                     }
                 )
@@ -452,6 +336,404 @@ fun CourseDetailScreen(
         }
     }
 }
+
+// ============================================
+// COURSE NOTES SCREEN
+// ============================================
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CourseNotesScreen(
+    courseId: Int,
+    onNavigateBack: () -> Unit,
+    onNavigateToNoteDetail: (noteId: Int) -> Unit,
+    viewModel: CourseDetailViewModel = viewModel()
+) {
+    val courseState by viewModel.courseDetailState.collectAsState()
+
+    var noteSortOrder by remember { mutableStateOf("desc") }
+    var showNoteSortMenu by remember { mutableStateOf(false) }
+    var showUploadNoteDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(courseId, noteSortOrder) {
+        viewModel.loadCourseDetail(courseId, noteSortOrder)
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Course Notes") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    // Sort button
+                    Box {
+                        IconButton(onClick = { showNoteSortMenu = true }) {
+                            Icon(Icons.Default.FilterList, contentDescription = "Sort")
+                        }
+                        DropdownMenu(
+                            expanded = showNoteSortMenu,
+                            onDismissRequest = { showNoteSortMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("⭐ Best rated first") },
+                                onClick = {
+                                    noteSortOrder = "desc"
+                                    showNoteSortMenu = false
+                                },
+                                leadingIcon = {
+                                    if (noteSortOrder == "desc") {
+                                        Icon(Icons.Default.Check, contentDescription = null)
+                                    }
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("⭐ Worst rated first") },
+                                onClick = {
+                                    noteSortOrder = "asc"
+                                    showNoteSortMenu = false
+                                },
+                                leadingIcon = {
+                                    if (noteSortOrder == "asc") {
+                                        Icon(Icons.Default.Check, contentDescription = null)
+                                    }
+                                }
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showUploadNoteDialog = true },
+                containerColor = MaterialTheme.colorScheme.primary
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Upload Note")
+            }
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            when (courseState) {
+                is CourseDetailState.Loading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+
+                is CourseDetailState.Error -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.padding(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Error,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(64.dp)
+                            )
+                            Text(
+                                text = (courseState as CourseDetailState.Error).message,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Button(onClick = { viewModel.loadCourseDetail(courseId, noteSortOrder) }) {
+                                Icon(Icons.Default.Refresh, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Retry")
+                            }
+                        }
+                    }
+                }
+
+                is CourseDetailState.Success -> {
+                    val data = (courseState as CourseDetailState.Success).data
+
+                    if (data.notes.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            EmptyCourseNotesCard()
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(data.notes) { note ->
+                                CourseNoteCard(
+                                    note = note,
+                                    onNoteClick = {
+                                        onNavigateToNoteDetail(note.id)
+                                    }
+                                )
+                            }
+
+                            // Bottom spacing for FAB
+                            item {
+                                Spacer(modifier = Modifier.height(80.dp))
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (showUploadNoteDialog) {
+                UploadNoteDialogInCourse(
+                    courseId = courseId,
+                    onDismiss = { showUploadNoteDialog = false },
+                    onSuccess = {
+                        showUploadNoteDialog = false
+                        viewModel.loadCourseDetail(courseId, noteSortOrder)
+                    }
+                )
+            }
+        }
+    }
+}
+
+// ============================================
+// COURSE REVIEWS SCREEN
+// ============================================
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CourseReviewsScreen(
+    courseId: Int,
+    onNavigateBack: () -> Unit,
+    viewModel: CourseDetailViewModel = viewModel()
+) {
+    val courseState by viewModel.courseDetailState.collectAsState()
+    val addReviewState by viewModel.addReviewState.collectAsState()
+
+    var reviewSortOrder by remember { mutableStateOf("date_desc") }
+    var showReviewSortMenu by remember { mutableStateOf(false) }
+    var showAddReviewDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(courseId) {
+        viewModel.loadCourseDetail(courseId)
+    }
+
+    LaunchedEffect(addReviewState) {
+        if (addReviewState is AddReviewState.Success) {
+            showAddReviewDialog = false
+            viewModel.loadCourseDetail(courseId)
+            viewModel.resetAddReviewState()
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Course Reviews") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    // Sort button
+                    Box {
+                        IconButton(onClick = { showReviewSortMenu = true }) {
+                            Icon(Icons.Default.FilterList, contentDescription = "Sort")
+                        }
+                        DropdownMenu(
+                            expanded = showReviewSortMenu,
+                            onDismissRequest = { showReviewSortMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("🕐 Newest first") },
+                                onClick = {
+                                    reviewSortOrder = "date_desc"
+                                    showReviewSortMenu = false
+                                },
+                                leadingIcon = {
+                                    if (reviewSortOrder == "date_desc") {
+                                        Icon(Icons.Default.Check, contentDescription = null)
+                                    }
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("🕐 Oldest first") },
+                                onClick = {
+                                    reviewSortOrder = "date_asc"
+                                    showReviewSortMenu = false
+                                },
+                                leadingIcon = {
+                                    if (reviewSortOrder == "date_asc") {
+                                        Icon(Icons.Default.Check, contentDescription = null)
+                                    }
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("⭐ Highest rated") },
+                                onClick = {
+                                    reviewSortOrder = "rating_desc"
+                                    showReviewSortMenu = false
+                                },
+                                leadingIcon = {
+                                    if (reviewSortOrder == "rating_desc") {
+                                        Icon(Icons.Default.Check, contentDescription = null)
+                                    }
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("⭐ Lowest rated") },
+                                onClick = {
+                                    reviewSortOrder = "rating_asc"
+                                    showReviewSortMenu = false
+                                },
+                                leadingIcon = {
+                                    if (reviewSortOrder == "rating_asc") {
+                                        Icon(Icons.Default.Check, contentDescription = null)
+                                    }
+                                }
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showAddReviewDialog = true },
+                containerColor = MaterialTheme.colorScheme.primary
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add Review")
+            }
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            when (courseState) {
+                is CourseDetailState.Loading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+
+                is CourseDetailState.Error -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.padding(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Error,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(64.dp)
+                            )
+                            Text(
+                                text = (courseState as CourseDetailState.Error).message,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Button(onClick = { viewModel.loadCourseDetail(courseId) }) {
+                                Icon(Icons.Default.Refresh, contentDescription = null)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Retry")
+                            }
+                        }
+                    }
+                }
+
+                is CourseDetailState.Success -> {
+                    val data = (courseState as CourseDetailState.Success).data
+
+                    // Sort reviews
+                    val sortedReviews = when (reviewSortOrder) {
+                        "date_desc" -> data.reviews.sortedByDescending { it.created_at }
+                        "date_asc" -> data.reviews.sortedBy { it.created_at }
+                        "rating_desc" -> data.reviews.sortedByDescending {
+                            (it.rating_clarity + it.rating_feasibility + it.rating_availability) / 3.0
+                        }
+                        "rating_asc" -> data.reviews.sortedBy {
+                            (it.rating_clarity + it.rating_feasibility + it.rating_availability) / 3.0
+                        }
+                        else -> data.reviews
+                    }
+
+                    if (sortedReviews.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            EmptyCourseReviewsCard()
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(sortedReviews) { review ->
+                                CourseReviewCard(review = review)
+                            }
+
+                            // Bottom spacing for FAB
+                            item {
+                                Spacer(modifier = Modifier.height(80.dp))
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (showAddReviewDialog) {
+                AddCourseReviewDialog(
+                    onDismiss = {
+                        showAddReviewDialog = false
+                        viewModel.resetAddReviewState()
+                    },
+                    onConfirm = { review ->
+                        viewModel.addReview(courseId, review)
+                    },
+                    addReviewState = addReviewState
+                )
+            }
+        }
+    }
+}
+
+// ============================================
+// DIALOGS
+// ============================================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -504,7 +786,7 @@ fun UploadNoteDialogInCourse(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()), // ✅ Ora funziona
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // File picker button
@@ -575,7 +857,6 @@ fun UploadNoteDialogInCourse(
     )
 }
 
-// ✅ NEW: Rate Note Dialog
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RateNoteDialog(
@@ -712,16 +993,115 @@ fun RateNoteDialog(
     )
 }
 
-// Course Note Card with Rating Display
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CourseNoteCardWithRating(
-    note: NoteWithRating,
-    onRateClick: () -> Unit
+fun AddCourseReviewDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (ReviewCreate) -> Unit,
+    addReviewState: AddReviewState
 ) {
-    val context = LocalContext.current
+    var ratingClarity by remember { mutableIntStateOf(0) }
+    var ratingFeasibility by remember { mutableIntStateOf(0) }
+    var ratingAvailability by remember { mutableIntStateOf(0) }
+    var comment by remember { mutableStateOf("") }
 
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Review") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Rating selectors
+                Text("Clarity:", fontWeight = FontWeight.Bold)
+                StarRatingSelector(rating = ratingClarity, onRatingChange = { ratingClarity = it })
+
+                Text("Feasibility:", fontWeight = FontWeight.Bold)
+                StarRatingSelector(rating = ratingFeasibility, onRatingChange = { ratingFeasibility = it })
+
+                Text("Availability:", fontWeight = FontWeight.Bold)
+                StarRatingSelector(rating = ratingAvailability, onRatingChange = { ratingAvailability = it })
+
+                // Comment
+                OutlinedTextField(
+                    value = comment,
+                    onValueChange = { comment = it },
+                    label = { Text("Comment (optional)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 3
+                )
+
+                // Loading state
+                if (addReviewState is AddReviewState.Loading) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
+
+                // Error state
+                if (addReviewState is AddReviewState.Error) {
+                    Text(
+                        text = addReviewState.message,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (ratingClarity > 0 && ratingFeasibility > 0 && ratingAvailability > 0) {
+                        onConfirm(
+                            ReviewCreate(
+                                rating_clarity = ratingClarity,
+                                rating_feasibility = ratingFeasibility,
+                                rating_availability = ratingAvailability,
+                                comment = comment.ifBlank { null }
+                            )
+                        )
+                    }
+                },
+                enabled = ratingClarity > 0 && ratingFeasibility > 0 && ratingAvailability > 0 && addReviewState !is AddReviewState.Loading
+            ) {
+                Text("Submit")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+// ============================================
+// UI COMPONENTS
+// ============================================
+
+@Composable
+fun StarRatingSelector(rating: Int, onRatingChange: (Int) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        repeat(5) { index ->
+            IconButton(onClick = { onRatingChange(index + 1) }) {
+                Icon(
+                    imageVector = if (index < rating) Icons.Default.Star else Icons.Outlined.StarOutline,
+                    contentDescription = null,
+                    tint = if (index < rating) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun CourseNoteCard(
+    note: NoteWithRating,
+    onNoteClick: () -> Unit
+) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onNoteClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -753,13 +1133,11 @@ fun CourseNoteCardWithRating(
                     )
                 }
 
-                // Rating badge (shows average or "Rate" button)
+                // Average rating badge (if present)
                 if (note.average_rating != null && note.average_rating > 0) {
-                    // Show average rating
                     Surface(
                         shape = MaterialTheme.shapes.small,
-                        color = Color(0xFFFFD700).copy(alpha = 0.2f),
-                        onClick = onRateClick
+                        color = Color(0xFFFFD700).copy(alpha = 0.2f)
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -780,129 +1158,40 @@ fun CourseNoteCardWithRating(
                             )
                         }
                     }
-                } else {
-                    // Show "Rate" button
-                    Surface(
-                        shape = MaterialTheme.shapes.small,
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        onClick = onRateClick
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.StarOutline,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = "Rate",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        }
-                    }
                 }
             }
 
-            // Note Description
+            // Note Description (preview)
             if (!note.description.isNullOrBlank()) {
                 Text(
                     text = note.description,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2
                 )
             }
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-            // Action Buttons
+            // "View Details" prompt
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // View PDF Button
-                Button(
-                    onClick = {
-                        val intent = Intent(context, PdfViewerActivity::class.java).apply {
-                            putExtra("PDF_URL", note.file_id)
-                        }
-                        context.startActivity(intent)
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.OpenInNew,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Preview")
-                }
-
-                // Download Button
-                OutlinedButton(
-                    onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                            data = Uri.parse(note.file_id)
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                        }
-                        try {
-                            context.startActivity(intent)
-                        } catch (e: Exception) {
-                            // Handle error
-                        }
-                    },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Download,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Download")
-                }
+                Text(
+                    text = "Tap to view details and reviews",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
             }
-        }
-    }
-}
-
-@Composable
-fun EmptyCourseNotesCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Description,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = "No notes yet",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Be the first to share notes for this course!",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }
@@ -912,7 +1201,6 @@ fun CourseInfoCard(
     courseName: String,
     teacherName: String
 ) {
-
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -1031,6 +1319,42 @@ fun RatingRow(label: String, rating: Double) {
 }
 
 @Composable
+fun EmptyCourseNotesCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Description,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "No notes yet",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Be the first to share notes for this course!",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
 fun EmptyCourseReviewsCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1133,205 +1457,6 @@ fun RatingBadge(label: String, rating: Int) {
                     contentDescription = null,
                     tint = Color(0xFFFFD700),
                     modifier = Modifier.size(16.dp)
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AddCourseReviewDialog(
-    onDismiss: () -> Unit,
-    onConfirm: (ReviewCreate) -> Unit,
-    addReviewState: AddReviewState
-) {
-    var ratingClarity by remember { mutableIntStateOf(0) }
-    var ratingFeasibility by remember { mutableIntStateOf(0) }
-    var ratingAvailability by remember { mutableIntStateOf(0) }
-    var comment by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Add Review") },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Rating selectors
-                Text("Clarity:", fontWeight = FontWeight.Bold)
-                StarRatingSelector(rating = ratingClarity, onRatingChange = { ratingClarity = it })
-
-                Text("Feasibility:", fontWeight = FontWeight.Bold)
-                StarRatingSelector(rating = ratingFeasibility, onRatingChange = { ratingFeasibility = it })
-
-                Text("Availability:", fontWeight = FontWeight.Bold)
-                StarRatingSelector(rating = ratingAvailability, onRatingChange = { ratingAvailability = it })
-
-                // Comment
-                OutlinedTextField(
-                    value = comment,
-                    onValueChange = { comment = it },
-                    label = { Text("Comment (optional)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 3
-                )
-
-                // Loading state
-                if (addReviewState is AddReviewState.Loading) {
-                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                }
-
-                // Error state
-                if (addReviewState is AddReviewState.Error) {
-                    Text(
-                        text = addReviewState.message,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (ratingClarity > 0 && ratingFeasibility > 0 && ratingAvailability > 0) {
-                        onConfirm(
-                            ReviewCreate(
-                                rating_clarity = ratingClarity,
-                                rating_feasibility = ratingFeasibility,
-                                rating_availability = ratingAvailability,
-                                comment = comment.ifBlank { null }
-                            )
-                        )
-                    }
-                },
-                enabled = ratingClarity > 0 && ratingFeasibility > 0 && ratingAvailability > 0 && addReviewState !is AddReviewState.Loading
-            ) {
-                Text("Submit")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
-
-@Composable
-fun StarRatingSelector(rating: Int, onRatingChange: (Int) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        repeat(5) { index ->
-            IconButton(onClick = { onRatingChange(index + 1) }) {
-                Icon(
-                    imageVector = if (index < rating) Icons.Default.Star else Icons.Outlined.StarOutline,
-                    contentDescription = null,
-                    tint = if (index < rating) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun CourseNoteCard(
-    note: NoteWithRating,
-    onNoteClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onNoteClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Note Header with Rating
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Description,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Text(
-                        text = "Student Note",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                // Average rating badge (if present)
-                if (note.average_rating != null && note.average_rating > 0) {
-                    Surface(
-                        shape = MaterialTheme.shapes.small,
-                        color = Color(0xFFFFD700).copy(alpha = 0.2f)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = null,
-                                tint = Color(0xFFFFD700),
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Text(
-                                text = String.format("%.1f", note.average_rating),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF000000).copy(alpha = 0.8f)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Note Description (preview)
-            if (!note.description.isNullOrBlank()) {
-                Text(
-                    text = note.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2
-                )
-            }
-
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-            // "View Details" prompt
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Tap to view details and reviews",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
                 )
             }
         }

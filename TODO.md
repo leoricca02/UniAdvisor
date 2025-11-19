@@ -68,29 +68,17 @@ TODO
 
 
 
--Position
+###### -Position
 
-1\. Interactive Campus Map 🗺️
+1. ###### Navigate to Class 🧭
 
- 	Display all faculty departments on a map
+######         "Navigate to this faculty" button on FacultyMainScreen
 
- 	Show course room locations with pins
+######  	"Navigate to this course" button on CourseDetailScreen
 
- 	Tap on a pin to see course details
+######  	Open Google Maps/Waze for turn-by-turn navigation
 
- 	Filter by faculty or course
-
-2\. Navigate to Class 🧭
-
- 	"Navigate to this course" button on CourseDetailScreen
-
- 	Calculate distance from current location to classroom
-
- 	Estimate walking time
-
- 	Open Google Maps/Waze for turn-by-turn navigation
-
- 	Show building entrance and room number
+######  	Show building entrance and room number DONE
 
 
 
@@ -152,5 +140,5 @@ TODO
 
 
 
--modificare la "course page" --> è sviluppata troppo verticalmente, aggiungere due shortcut dopo gli average rating del corso "See Course Reviews" e "See Course Notes"
+###### -modificare la "course page" --> è sviluppata troppo verticalmente, aggiungere due shortcut dopo gli average rating del corso "See Course Reviews" e "See Course Notes" DONE
 
