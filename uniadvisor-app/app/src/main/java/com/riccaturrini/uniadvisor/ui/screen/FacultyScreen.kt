@@ -20,6 +20,7 @@ import com.riccaturrini.uniadvisor.viewmodel.AuthViewModel
 import com.riccaturrini.uniadvisor.viewmodel.CourseListState
 import com.riccaturrini.uniadvisor.viewmodel.CourseViewModel
 import com.riccaturrini.uniadvisor.ui.screen.NoteDetailScreen
+import com.riccaturrini.uniadvisor.utils.rememberShakeDetector
 
 @Composable
 fun FacultyScreen(
@@ -86,7 +87,7 @@ fun FacultyScreen(
                     }
                 },
                 onNavigateToLocationTest = {
-                    navController.navigate("location_test")
+                    navController.navigate("location")
                 }
             )
         }
@@ -118,9 +119,12 @@ fun FacultyScreen(
                 )
             }
         }
-        composable("location_test") {
-            LocationTestScreen(
-                onNavigateBack = { navController.popBackStack() }
+        composable("location") {
+            CampusMapScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onCourseSelected = { courseId ->
+                    navController.navigate("course_detail/$courseId")
+                }
             )
         }
     }
@@ -142,6 +146,11 @@ fun FacultyMainScreen(
 
     var courseSortOrder by remember { mutableStateOf("name_asc") } // name_asc, name_desc, rating_desc, rating_asc
     var showCourseSortMenu by remember { mutableStateOf(false) }
+
+    // Shake to refresh
+    val shakeDetector = rememberShakeDetector {
+        onRefresh() // Triggers your existing refresh function
+    }
 
     Scaffold(
         topBar = {

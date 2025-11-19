@@ -107,7 +107,7 @@ interface ApiService {
     suspend fun getNoteReviews(@Path("note_id") noteId: Int): retrofit2.Response<List<NoteRating>>
 
     // ============================================
-    // ✅ NEW: LOCATION & MAP ENDPOINTS
+    // LOCATION & MAP ENDPOINTS
     // ============================================
 
     @GET("location/faculties/map")
@@ -151,11 +151,11 @@ interface ApiService {
  * Configurato con timeout appropriati e l'AuthInterceptor corretto.
  */
 object ApiClient {
-    // URL del backend - usa 10.0.2.2 per l'emulatore Android
-    private const val BASE_URL = "https://uniadvisor-backend-5mop.onrender.com/"
-    //private const val BASE_URL = "http://10.0.2.2:8000"
+    // URL of backend - use 10.0.2.2 for local testing
+    // private const val BASE_URL = "https://uniadvisor-backend-5mop.onrender.com/"
+    private const val BASE_URL = "http://10.0.2.2:8000"
 
-    // Configurazione OkHttpClient con timeout estesi e AuthInterceptor
+    // configuration for the client to connect to the server
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(AuthInterceptor()) // Usa l'AuthInterceptor corretto
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -165,7 +165,7 @@ object ApiClient {
         .retryOnConnectionFailure(true)
         .build()
 
-    // Istanza singleton di ApiService
+    // Retrofit instance
     val instance: ApiService by lazy {
         val retrofit = Retrofit.Builder()
             .baseUrl(BASE_URL)

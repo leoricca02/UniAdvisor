@@ -132,3 +132,17 @@ TODO
 
 -Mettere i colori nelle note, quindi rosso se è basso, giallo se nella media, verde se è top.
 
+
+
+-controllare problema con nuova registrazione (non prende la facoltà, la prende solo se la cambio e poi la ricambio)
+
+-nuovo login "non google"--> completa profilo e non va bene
+
+
+
+-aggiungere filtro alle reviews delle note
+
+
+
+-feature aggiuntiva: inserire una barra di ricerca per cercare i corsi
+
