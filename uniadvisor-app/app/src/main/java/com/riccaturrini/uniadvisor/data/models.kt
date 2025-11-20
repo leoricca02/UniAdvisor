@@ -2,6 +2,7 @@
 package com.riccaturrini.uniadvisor.data
 
 import com.google.gson.annotations.SerializedName
+import android.net.Uri
 
 
 // Corrisponde a schemas/user.py -> UserProfileCreate
@@ -126,3 +127,32 @@ data class NoteCreate(
     val file_id: String, // Firebase Storage download URL
     val description: String?
 )
+
+/**
+ * Represents a captured image with its URI and extracted text
+ */
+data class CapturedImage(
+    val uri: Uri,
+    val extractedText: String? = null,
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+/**
+ * Represents the state of OCR processing
+ */
+sealed class OcrProcessingState {
+    object Idle : OcrProcessingState()
+    object Processing : OcrProcessingState()
+    data class Success(val text: String) : OcrProcessingState()
+    data class Error(val message: String) : OcrProcessingState()
+}
+
+/**
+ * Represents the state of PDF generation
+ */
+sealed class PdfGenerationState {
+    object Idle : PdfGenerationState()
+    data class Processing(val progress: Int) : PdfGenerationState()
+    data class Success(val pdfUri: Uri) : PdfGenerationState()
+    data class Error(val message: String) : PdfGenerationState()
+}

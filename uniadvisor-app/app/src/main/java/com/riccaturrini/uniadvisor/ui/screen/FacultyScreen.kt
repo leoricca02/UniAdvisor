@@ -131,6 +131,20 @@ fun FacultyScreen(
             )
         }
 
+        composable("camera_ocr/{courseId}") { backStackEntry ->
+            val courseId = backStackEntry.arguments?.getString("courseId")?.toIntOrNull()
+            if (courseId != null) {
+                CameraOcrScreen(
+                    courseId = courseId,
+                    onNavigateBack = { navController.popBackStack() },
+                    onSuccess = {
+                        navController.popBackStack()
+                        // Optionally show success message
+                    }
+                )
+            }
+        }
+
         // Added onNavigateToNoteDetail
         composable("course_detail/{courseId}") { backStackEntry ->
             val courseId = backStackEntry.arguments?.getString("courseId")?.toIntOrNull()

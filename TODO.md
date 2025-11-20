@@ -58,13 +58,13 @@ TODO
 
 
 
--Sensors
+###### -Sensors
 
-1\. Add shake detection for refresh
+###### 1\. Add shake detection for refresh
 
-2\. Implement tilt-based navigation (optional)
+###### 2\. Implement tilt-based navigation (optional)
 
-3\. Add haptic feedback
+###### 3\. Add haptic feedback DONE
 
 
 

@@ -1615,3 +1615,262 @@ fun LocationInfoCard(
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun UploadNoteDialogWithCamera(
+    courseId: Int,
+    onDismiss: () -> Unit,
+    onSuccess: () -> Unit,
+    onOpenCamera: () -> Unit, // Add this callback
+    notesViewModel: NotesViewModel = viewModel()
+) {
+    var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
+    var selectedFileName by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var showUploadOptions by remember { mutableStateOf(true) }
+    // When opening the upload dialog, add navigation to camera:
+    var showUploadDialog by remember { mutableStateOf(false) }
+
+    val uploadState by notesViewModel.uploadState.collectAsState()
+    val context = LocalContext.current
+
+    LaunchedEffect(uploadState) {
+        if (uploadState is UploadNoteState.Success) {
+            onSuccess()
+            notesViewModel.resetUploadState()
+        }
+    }
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            selectedFileUri = it
+            selectedFileName = it.lastPathSegment ?: "document.pdf"
+            showUploadOptions = false
+        }
+    }
+
+    if (showUploadDialog) {
+        UploadNoteDialogWithCamera(
+            courseId = courseId,
+            onDismiss = { showUploadDialog = false },
+            onSuccess = {
+                showUploadDialog = false
+                viewModel.loadCourseDetail(courseId)
+            },
+            onOpenCamera = {
+                navController.navigate("camera_ocr/$courseId")
+            }
+        )
+    }
+
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Description,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text("Upload Note")
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                if (showUploadOptions) {
+                    // Upload method selection
+                    Text(
+                        text = "Choose upload method:",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    // Scan with Camera option
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onOpenCamera()
+                                onDismiss()
+                            },
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CameraAlt,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = "Scan with Camera",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Take photos and convert to PDF with OCR",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null
+                            )
+                        }
+                    }
+
+                    // Select PDF option
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                filePickerLauncher.launch("application/pdf")
+                            },
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AttachFile,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = "Select PDF File",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Choose an existing PDF from your device",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Spacer(modifier = Modifier.weight(1f))
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null
+                            )
+                        }
+                    }
+                } else {
+                    // File selected - show upload form
+                    Text(
+                        text = "Selected file:",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.Description, contentDescription = null)
+                            Text(
+                                text = selectedFileName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(
+                                onClick = {
+                                    selectedFileUri = null
+                                    selectedFileName = ""
+                                    showUploadOptions = true
+                                }
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear")
+                            }
+                        }
+                    }
+
+                    // Description
+                    OutlinedTextField(
+                        value = description,
+                        onValueChange = { description = it },
+                        label = { Text("Description (optional)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 3
+                    )
+
+                    // Error message
+                    if (uploadState is UploadNoteState.Error) {
+                        Text(
+                            text = (uploadState as UploadNoteState.Error).message,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (!showUploadOptions) {
+                Button(
+                    onClick = {
+                        selectedFileUri?.let { uri ->
+                            notesViewModel.uploadNote(
+                                fileUri = uri,
+                                courseId = courseId,
+                                description = if (description.isBlank()) "" else description,
+                                fileName = selectedFileName
+                            )
+                        }
+                    },
+                    enabled = selectedFileUri != null && uploadState !is UploadNoteState.Uploading
+                ) {
+                    if (uploadState is UploadNoteState.Uploading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text("Upload")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = uploadState !is UploadNoteState.Uploading
+            ) {
+                Text("Cancel")
+            }
+        }
+    )
+}

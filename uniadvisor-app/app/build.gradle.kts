@@ -123,4 +123,19 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0") // Per convertire JSON in oggetti Kotlin
     implementation("com.squareup.okhttp3:okhttp:4.11.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0") // Utile per il debug
+
+    // Camera dependencies
+    implementation("androidx.camera:camera-core:1.3.1")
+    implementation("androidx.camera:camera-camera2:1.3.1")
+    implementation("androidx.camera:camera-lifecycle:1.3.1")
+    implementation("androidx.camera:camera-view:1.3.1")
+
+    // ML Kit Text Recognition
+    implementation("com.google.mlkit:text-recognition:16.0.0")
+
+    // PDF generation
+    implementation("com.itextpdf:itext7-core:7.2.5")
+
+    // Image loading (optional, for preview)
+    implementation("io.coil-kt:coil-compose:2.5.0")
 }
