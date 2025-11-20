@@ -147,15 +147,16 @@ fun ReviewsScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        items(reviews) { review ->
+                        items(reviews) { item ->
                             ReviewCard(
-                                review = review,
+                                review = item.review,
+                                courseName = item.courseName,
                                 onEditClick = {
-                                    selectedReview = review
+                                    selectedReview = item.review
                                     showEditDialog = true
                                 },
                                 onDeleteClick = {
-                                    selectedReview = review
+                                    selectedReview = item.review
                                     showDeleteDialog = true
                                 }
                             )
@@ -200,6 +201,7 @@ fun ReviewsScreen(
 @Composable
 fun ReviewCard(
     review: Review,
+    courseName: String,
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
@@ -219,7 +221,7 @@ fun ReviewCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Course #${review.course_id}",
+                    text = courseName,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -319,9 +321,8 @@ fun ReviewRatingRow(label: String, rating: Int) {
         }
         Spacer(modifier = Modifier.width(8.dp))
         Text(
-            text = "$rating/5",
+            text = String.format("%.1f", rating.toDouble()),
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
         )
     }

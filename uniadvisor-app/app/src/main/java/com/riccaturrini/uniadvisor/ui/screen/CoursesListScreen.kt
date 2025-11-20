@@ -223,8 +223,8 @@ fun RatingChip(label: String, rating: Double) {
                 fontWeight = FontWeight.Bold
             ),
             color = when {
-                rating >= 4.0 -> MaterialTheme.colorScheme.primary
-                rating >= 2.5 -> MaterialTheme.colorScheme.tertiary
+                rating >= 4.0 -> Color(0xFF4CAF50)
+                rating >= 2.5 -> Color(0xFFC79C00)
                 rating > 0 -> MaterialTheme.colorScheme.error
                 else -> MaterialTheme.colorScheme.onSurfaceVariant
             }

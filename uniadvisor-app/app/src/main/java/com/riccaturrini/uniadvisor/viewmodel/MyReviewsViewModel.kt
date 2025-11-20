@@ -12,10 +12,11 @@ import kotlinx.coroutines.launch
 
 sealed class MyReviewsUiState {
     object Loading : MyReviewsUiState()
-    data class Success(val reviews: List<Review>) : MyReviewsUiState()
+    data class Success(val reviews: List<MyReviewUiModel>) : MyReviewsUiState()
     object Empty : MyReviewsUiState()
     data class Error(val message: String) : MyReviewsUiState()
 }
+
 
 sealed class ReviewActionState {
     object Idle : ReviewActionState()
@@ -53,14 +54,44 @@ class MyReviewsViewModel : ViewModel() {
                         if (reviews.isEmpty()) {
                             _reviewsState.value = MyReviewsUiState.Empty
                         } else {
-                            _reviewsState.value = MyReviewsUiState.Success(reviews)
+
+                            // Prendi i course_id unici
+                            val courseIds = reviews.map { it.course_id }.distinct()
+
+                            // Mappa ID corso → nome corso
+                            val courseNames = mutableMapOf<Int, String>()
+
+                            for (id in courseIds) {
+                                try {
+                                    val courseResponse = apiService.getCourseDetail(id)
+                                    if (courseResponse.isSuccessful && courseResponse.body() != null) {
+                                        courseNames[id] = courseResponse.body()!!.name
+                                    } else {
+                                        courseNames[id] = "Course #$id"
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e("MyReviewsViewModel", "⚠️ Error loading course $id name: ${e.message}")
+                                    courseNames[id] = "Course #$id"
+                                }
+                            }
+
+                            // Costruisci lista UI model
+                            val uiReviews = reviews.map { review ->
+                                MyReviewUiModel(
+                                    review = review,
+                                    courseName = courseNames[review.course_id] ?: "Course #${review.course_id}"
+                                )
+                            }
+
+                            _reviewsState.value = MyReviewsUiState.Success(uiReviews)
                         }
                     }
+
                     response.code() == 404 -> {
-                        // 404 means no reviews yet - this is NOT an error!
-                        Log.d("MyReviewsViewModel", "ℹ️ No reviews found (404) - showing empty state")
+                        Log.d("MyReviewsViewModel", "ℹ️ No reviews (404) → empty state")
                         _reviewsState.value = MyReviewsUiState.Empty
                     }
+
                     else -> {
                         val errorMsg = "Error loading reviews: ${response.code()}"
                         Log.e("MyReviewsViewModel", "❌ $errorMsg")
@@ -74,6 +105,7 @@ class MyReviewsViewModel : ViewModel() {
             }
         }
     }
+
 
     /**
      * Update an existing review
@@ -133,3 +165,8 @@ class MyReviewsViewModel : ViewModel() {
         _actionState.value = ReviewActionState.Idle
     }
 }
+
+data class MyReviewUiModel(
+    val review: Review,
+    val courseName: String
+)

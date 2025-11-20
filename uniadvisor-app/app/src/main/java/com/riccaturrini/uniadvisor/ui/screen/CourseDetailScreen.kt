@@ -1297,18 +1297,46 @@ fun RatingRow(label: String, rating: Double) {
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f)
         )
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            repeat(5) { index ->
+            val fullStars = rating.toInt()
+            val hasHalfStar = (rating % 1) >= 0.25 && (rating % 1) <= 0.75
+            val emptyStars = 5 - fullStars - if (hasHalfStar) 1 else 0
+
+            // ⭐ Stelle piene (oro)
+            repeat(fullStars) {
                 Icon(
-                    imageVector = if (index < rating.toInt()) Icons.Default.Star else Icons.Outlined.StarOutline,
+                    imageVector = Icons.Filled.Star,
                     contentDescription = null,
-                    tint = if (index < rating.toInt()) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = Color(0xFFFFD700),
                     modifier = Modifier.size(20.dp)
                 )
             }
+
+            // ⯪ Mezza stella (oro)
+            if (hasHalfStar) {
+                Icon(
+                    imageVector = Icons.Filled.StarHalf,
+                    contentDescription = null,
+                    tint = Color(0xFFFFD700),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // ☆ Stelle vuote (bordo nero)
+            repeat(emptyStars) {
+                Icon(
+                    imageVector = Icons.Filled.StarBorder,
+                    contentDescription = null,
+                    tint = Color.Black,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // Numero media
             Text(
                 text = String.format("%.1f", rating),
                 style = MaterialTheme.typography.bodyMedium,
@@ -1317,6 +1345,7 @@ fun RatingRow(label: String, rating: Double) {
         }
     }
 }
+
 
 @Composable
 fun EmptyCourseNotesCard() {
