@@ -3,6 +3,8 @@ package com.riccaturrini.uniadvisor.utils
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import android.util.Log
 import com.google.mlkit.vision.common.InputImage
@@ -74,8 +76,9 @@ object OcrUtils {
             val document = Document(pdfDocument)
 
             images.forEachIndexed { index, imageUri ->
-                // Add image to PDF
+                // ✅ Load bitmap with correct rotation
                 val bitmap = loadBitmapFromUri(context, imageUri)
+
                 val byteArrayOutputStream = ByteArrayOutputStream()
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 80, byteArrayOutputStream)
                 val imageData = ImageDataFactory.create(byteArrayOutputStream.toByteArray())
@@ -110,12 +113,46 @@ object OcrUtils {
     }
 
     /**
-     * Load bitmap from URI
+     * Load bitmap from URI and rotate it based on Exif data
      */
     private fun loadBitmapFromUri(context: Context, uri: Uri): Bitmap {
-        return context.contentResolver.openInputStream(uri)?.use { inputStream ->
-            BitmapFactory.decodeStream(inputStream)
-        } ?: throw IllegalArgumentException("Cannot load bitmap from URI: $uri")
+        val inputStream = context.contentResolver.openInputStream(uri)
+            ?: throw IllegalArgumentException("Cannot load bitmap from URI: $uri")
+
+        val bitmap = BitmapFactory.decodeStream(inputStream)
+        inputStream.close()
+
+        if (bitmap == null) throw IllegalArgumentException("Failed to decode bitmap from: $uri")
+
+        return rotateBitmapIfRequired(context, bitmap, uri)
+    }
+
+    /**
+     * Reads Exif orientation and rotates the bitmap if necessary
+     */
+    private fun rotateBitmapIfRequired(context: Context, bitmap: Bitmap, uri: Uri): Bitmap {
+        try {
+            val input = context.contentResolver.openInputStream(uri) ?: return bitmap
+            val exif = ExifInterface(input)
+            val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+            input.close()
+
+            return when (orientation) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> rotateImage(bitmap, 90f)
+                ExifInterface.ORIENTATION_ROTATE_180 -> rotateImage(bitmap, 180f)
+                ExifInterface.ORIENTATION_ROTATE_270 -> rotateImage(bitmap, 270f)
+                else -> bitmap
+            }
+        } catch (e: Exception) {
+            Log.e("OcrUtils", "Failed to rotate bitmap", e)
+            return bitmap
+        }
+    }
+
+    private fun rotateImage(source: Bitmap, angle: Float): Bitmap {
+        val matrix = Matrix()
+        matrix.postRotate(angle)
+        return Bitmap.createBitmap(source, 0, 0, source.width, source.height, matrix, true)
     }
 
     /**

@@ -15,19 +15,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import com.riccaturrini.uniadvisor.data.UploadNoteState
 
 sealed class NotesUiState {
     object Loading : NotesUiState()
     data class Success(val notes: List<Note>) : NotesUiState()
     object Empty : NotesUiState()
     data class Error(val message: String) : NotesUiState()
-}
-
-sealed class UploadNoteState {
-    object Idle : UploadNoteState()
-    data class Uploading(val progress: Int) : UploadNoteState()
-    object Success : UploadNoteState()
-    data class Error(val message: String) : UploadNoteState()
 }
 
 sealed class DeleteNoteState {

@@ -25,6 +25,7 @@ import com.riccaturrini.uniadvisor.data.Course
 import com.riccaturrini.uniadvisor.data.Note
 import com.riccaturrini.uniadvisor.ui.activity.PdfViewerActivity
 import com.riccaturrini.uniadvisor.viewmodel.*
+import com.riccaturrini.uniadvisor.data.UploadNoteState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

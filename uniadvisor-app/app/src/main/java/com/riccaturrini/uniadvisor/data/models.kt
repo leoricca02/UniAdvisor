@@ -108,14 +108,14 @@ data class NoteRating(
     val created_at: String
 )
 
-// ✅ NEW: Per creare un rating di una nota
+// Per creare un rating di una nota
 data class NoteRatingCreate(
     val note_id: Int,
     val rating: Int,  // 1-5
     val comment: String?
 )
 
-// ✅ NEW: Per aggiornare un rating
+// Per aggiornare un rating
 data class NoteRatingUpdate(
     val rating: Int,
     val comment: String?
@@ -155,4 +155,14 @@ sealed class PdfGenerationState {
     data class Processing(val progress: Int) : PdfGenerationState()
     data class Success(val pdfUri: Uri) : PdfGenerationState()
     data class Error(val message: String) : PdfGenerationState()
+}
+
+/**
+ * Represents the state of uploading a note
+ */
+sealed class UploadNoteState {
+    object Idle : UploadNoteState()
+    data class Uploading(val progress: Int) : UploadNoteState()
+    object Success : UploadNoteState()
+    data class Error(val message: String) : UploadNoteState()
 }

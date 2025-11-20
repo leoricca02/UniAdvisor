@@ -44,17 +44,17 @@ TODO
 
 
 
--Camera + OCR (1-2 days)
+###### -Camera + OCR (1-2 days)
 
-1\. Add CameraX for photo capture
+###### 1\. Add CameraX for photo capture
 
-2\. Integrate ML Kit Text Recognition
+###### 2\. Integrate ML Kit Text Recognition
 
-3\. Create OCR preview screen
+###### 3\. Create OCR preview screen
 
-4\. Generate searchable PDF from extracted text
+###### 4\. Generate searchable PDF from extracted text
 
-5\. Upload to Firebase Storage
+###### 5\. Upload to Firebase Storage DONE
 
 
 

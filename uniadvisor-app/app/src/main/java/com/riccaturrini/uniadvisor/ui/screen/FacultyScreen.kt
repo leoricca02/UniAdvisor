@@ -160,6 +160,10 @@ fun FacultyScreen(
                     },
                     onNavigateToCourseReviews = { id ->
                         navController.navigate("course_reviews/$id")
+                    },
+                    onNavigateToCamera = { id ->
+                        // Use your navController to go to the camera screen
+                        navController.navigate("camera_ocr/$id")
                     }
                 )
             }
@@ -173,6 +177,10 @@ fun FacultyScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToNoteDetail = { noteId ->
                         navController.navigate("note_detail/$courseId/$noteId")
+                    },
+                    onNavigateToCamera = { id ->
+                        // Use your navController to go to the camera screen
+                        navController.navigate("camera_ocr/$id")
                     }
                 )
             }

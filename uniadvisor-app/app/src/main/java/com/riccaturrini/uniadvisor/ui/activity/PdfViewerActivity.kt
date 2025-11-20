@@ -1,7 +1,9 @@
 package com.riccaturrini.uniadvisor.ui.activity
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
+import android.net.Uri
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.util.Log
@@ -40,12 +42,15 @@ class PdfViewerActivity : ComponentActivity() {
                     pdfUrl = pdfUrl,
                     onBackPressed = { finish() },
                     onDownload = {
-                        // Trigger download
-                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
-                            data = android.net.Uri.parse(pdfUrl)
-                            flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(Uri.parse(pdfUrl), "application/pdf")
+                                flags = Intent.FLAG_ACTIVITY_NO_HISTORY or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            }
+                            startActivity(intent)
+                        } catch (e: Exception) {
+                            Log.e("PdfViewerActivity", "Could not open PDF intent", e)
                         }
-                        startActivity(intent)
                     }
                 )
             }
@@ -73,24 +78,36 @@ fun PdfViewerScreen(
                 isLoading = true
                 errorMessage = null
 
-                // Download PDF from Firebase Storage
-                val storage = FirebaseStorage.getInstance()
-                val pdfRef = storage.getReferenceFromUrl(pdfUrl)
-                val localFile = File(context.cacheDir, "temp_preview.pdf")
-
-                pdfRef.getFile(localFile).await()
+                val fileToRender: File = if (pdfUrl.startsWith("http") || pdfUrl.startsWith("gs:")) {
+                    // Remote file (Firebase) -> Download it
+                    val storage = FirebaseStorage.getInstance()
+                    val pdfRef = storage.getReferenceFromUrl(pdfUrl)
+                    val localFile = File(context.cacheDir, "temp_preview.pdf")
+                    pdfRef.getFile(localFile).await()
+                    localFile
+                } else {
+                    // Local file -> Use directly
+                    val uri = Uri.parse(pdfUrl)
+                    if (uri.scheme == "file" && uri.path != null) {
+                        File(uri.path!!)
+                    } else {
+                        throw IllegalArgumentException("Unsupported URI scheme: $pdfUrl")
+                    }
+                }
 
                 // Render PDF pages
                 val renderResult = withContext(Dispatchers.IO) {
-                    renderPdfPages(localFile)
+                    renderPdfPages(fileToRender)
                 }
 
                 bitmaps = renderResult.first
                 totalPages = renderResult.second
                 isLoading = false
 
-                // Clean up
-                localFile.delete()
+                // Only delete if it was a temp download
+                if (pdfUrl.startsWith("http") || pdfUrl.startsWith("gs:")) {
+                    fileToRender.delete()
+                }
             } catch (e: Exception) {
                 Log.e("PdfViewerScreen", "Error loading PDF", e)
                 errorMessage = "Failed to load PDF: ${e.message}"
@@ -120,7 +137,7 @@ fun PdfViewerScreen(
                 },
                 actions = {
                     IconButton(onClick = onDownload) {
-                        Icon(Icons.Default.Download, contentDescription = "Download")
+                        Icon(Icons.Default.Download, contentDescription = "Open externally")
                     }
                 }
             )
@@ -134,18 +151,7 @@ fun PdfViewerScreen(
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        CircularProgressIndicator()
-                        Text("Loading PDF preview...")
-                        Text(
-                            "This may take a moment for large files",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    CircularProgressIndicator()
                 }
             }
 
@@ -156,18 +162,10 @@ fun PdfViewerScreen(
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Text(
-                            text = errorMessage!!,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Button(onClick = onDownload) {
-                            Text("Download Instead")
-                        }
-                    }
+                    Text(
+                        text = errorMessage!!,
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
             }
 
@@ -179,32 +177,6 @@ fun PdfViewerScreen(
                         .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Info banner
-                    if (bitmaps.isNotEmpty()) {
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            shape = MaterialTheme.shapes.small
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Showing all $totalPages pages",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                                TextButton(onClick = onDownload) {
-                                    Text("Download PDF")
-                                }
-                            }
-                        }
-                    }
-
                     // Render all pages
                     bitmaps.forEachIndexed { index, bitmap ->
                         Column(
@@ -214,9 +186,8 @@ fun PdfViewerScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(
-                                text = "Page ${index + 1} of ${bitmaps.size}",
+                                text = "Page ${index + 1}",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(vertical = 4.dp)
                             )
                             Card(
@@ -229,20 +200,7 @@ fun PdfViewerScreen(
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
-                            if (index < bitmaps.size - 1) {
-                                Divider(modifier = Modifier.padding(vertical = 12.dp))
-                            }
                         }
-                    }
-
-                    // Download button at bottom
-                    Button(
-                        onClick = onDownload,
-                        modifier = Modifier.padding(16.dp)
-                    ) {
-                        Icon(Icons.Default.Download, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Download PDF")
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))
@@ -262,23 +220,16 @@ private fun renderPdfPages(file: File): Pair<List<Bitmap>, Int> {
 
         totalPages = pdfRenderer.pageCount
 
-        // RENDER ALL PAGES (no limit)
         for (i in 0 until totalPages) {
             val page = pdfRenderer.openPage(i)
-
-            // Create bitmap with appropriate size
             val bitmap = Bitmap.createBitmap(
-                page.width * 2, // Increase resolution for better quality
+                page.width * 2,
                 page.height * 2,
                 Bitmap.Config.ARGB_8888
             )
-
-            // Render page to bitmap
             page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
             bitmaps.add(bitmap)
             page.close()
-
-            Log.d("renderPdfPages", "Rendered page ${i + 1} of $totalPages")
         }
 
         pdfRenderer.close()

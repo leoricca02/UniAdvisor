@@ -37,6 +37,7 @@ fun CourseDetailScreen(
     onNavigateToNoteDetail: (noteId: Int) -> Unit,
     onNavigateToCourseNotes: (courseId: Int) -> Unit,
     onNavigateToCourseReviews: (courseId: Int) -> Unit,
+    onNavigateToCamera: (courseId: Int) -> Unit,
     viewModel: CourseDetailViewModel = viewModel()
 ) {
     val courseState by viewModel.courseDetailState.collectAsState()
@@ -152,6 +153,7 @@ fun CourseDetailScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+
             when (courseState) {
                 is CourseDetailState.Loading -> {
                     Box(
@@ -308,14 +310,16 @@ fun CourseDetailScreen(
             }
 
             if (showUploadNoteDialog) {
-                UploadNoteDialogInCourse(
+                UploadNoteDialogWithCamera(
                     courseId = courseId,
-                    onDismiss = {
-                        showUploadNoteDialog = false
-                    },
+                    onDismiss = { showUploadNoteDialog = false },
                     onSuccess = {
                         showUploadNoteDialog = false
                         viewModel.loadCourseDetail(courseId, noteSortOrder)
+                    },
+                    onOpenCamera = {
+                        showUploadNoteDialog = false
+                        onNavigateToCamera(courseId) // Call navigation
                     }
                 )
             }
@@ -347,6 +351,7 @@ fun CourseNotesScreen(
     courseId: Int,
     onNavigateBack: () -> Unit,
     onNavigateToNoteDetail: (noteId: Int) -> Unit,
+    onNavigateToCamera: (courseId: Int) -> Unit,
     viewModel: CourseDetailViewModel = viewModel()
 ) {
     val courseState by viewModel.courseDetailState.collectAsState()
@@ -498,14 +503,17 @@ fun CourseNotesScreen(
                     }
                 }
             }
-
             if (showUploadNoteDialog) {
-                UploadNoteDialogInCourse(
+                UploadNoteDialogWithCamera(
                     courseId = courseId,
                     onDismiss = { showUploadNoteDialog = false },
                     onSuccess = {
                         showUploadNoteDialog = false
                         viewModel.loadCourseDetail(courseId, noteSortOrder)
+                    },
+                    onOpenCamera = {
+                        showUploadNoteDialog = false
+                        onNavigateToCamera(courseId)
                     }
                 )
             }
@@ -1622,19 +1630,18 @@ fun UploadNoteDialogWithCamera(
     courseId: Int,
     onDismiss: () -> Unit,
     onSuccess: () -> Unit,
-    onOpenCamera: () -> Unit, // Add this callback
+    onOpenCamera: () -> Unit, // Callback to trigger navigation
     notesViewModel: NotesViewModel = viewModel()
 ) {
     var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
     var selectedFileName by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var showUploadOptions by remember { mutableStateOf(true) }
-    // When opening the upload dialog, add navigation to camera:
-    var showUploadDialog by remember { mutableStateOf(false) }
 
     val uploadState by notesViewModel.uploadState.collectAsState()
     val context = LocalContext.current
 
+    // Handle upload success
     LaunchedEffect(uploadState) {
         if (uploadState is UploadNoteState.Success) {
             onSuccess()
@@ -1651,21 +1658,6 @@ fun UploadNoteDialogWithCamera(
             showUploadOptions = false
         }
     }
-
-    if (showUploadDialog) {
-        UploadNoteDialogWithCamera(
-            courseId = courseId,
-            onDismiss = { showUploadDialog = false },
-            onSuccess = {
-                showUploadDialog = false
-                viewModel.loadCourseDetail(courseId)
-            },
-            onOpenCamera = {
-                navController.navigate("camera_ocr/$courseId")
-            }
-        )
-    }
-
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1690,20 +1682,21 @@ fun UploadNoteDialogWithCamera(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 if (showUploadOptions) {
-                    // Upload method selection
                     Text(
                         text = "Choose upload method:",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
 
-                    // Scan with Camera option
+                    // 📸 Scan with Camera Option
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .padding(top = 8.dp)
                             .clickable {
-                                onOpenCamera()
+                                // Close dialog and open camera
                                 onDismiss()
+                                onOpenCamera()
                             },
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
@@ -1721,32 +1714,20 @@ fun UploadNoteDialogWithCamera(
                                 modifier = Modifier.size(32.dp)
                             )
                             Column {
-                                Text(
-                                    text = "Scan with Camera",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "Take photos and convert to PDF with OCR",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Text("Scan with Camera", fontWeight = FontWeight.Bold)
+                                Text("Take photos & convert to PDF", style = MaterialTheme.typography.bodySmall)
                             }
                             Spacer(modifier = Modifier.weight(1f))
-                            Icon(
-                                imageVector = Icons.Default.ChevronRight,
-                                contentDescription = null
-                            )
+                            Icon(Icons.Default.ChevronRight, contentDescription = null)
                         }
                     }
 
-                    // Select PDF option
+                    // 📎 Select PDF Option
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                filePickerLauncher.launch("application/pdf")
-                            },
+                            .padding(top = 8.dp)
+                            .clickable { filePickerLauncher.launch("application/pdf") },
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         Row(
@@ -1763,75 +1744,45 @@ fun UploadNoteDialogWithCamera(
                                 modifier = Modifier.size(32.dp)
                             )
                             Column {
-                                Text(
-                                    text = "Select PDF File",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "Choose an existing PDF from your device",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Text("Select PDF File", fontWeight = FontWeight.Bold)
+                                Text("Choose from device", style = MaterialTheme.typography.bodySmall)
                             }
                             Spacer(modifier = Modifier.weight(1f))
-                            Icon(
-                                imageVector = Icons.Default.ChevronRight,
-                                contentDescription = null
-                            )
+                            Icon(Icons.Default.ChevronRight, contentDescription = null)
                         }
                     }
                 } else {
-                    // File selected - show upload form
-                    Text(
-                        text = "Selected file:",
-                        style = MaterialTheme.typography.labelMedium
-                    )
-
+                    // File Selected Form
+                    Text("Selected file:", style = MaterialTheme.typography.labelMedium)
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceVariant,
                         shape = MaterialTheme.shapes.small
                     ) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(Icons.Default.Description, contentDescription = null)
-                            Text(
-                                text = selectedFileName,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.weight(1f)
-                            )
-                            IconButton(
-                                onClick = {
-                                    selectedFileUri = null
-                                    selectedFileName = ""
-                                    showUploadOptions = true
-                                }
-                            ) {
+                            Spacer(Modifier.width(8.dp))
+                            Text(selectedFileName, modifier = Modifier.weight(1f))
+                            IconButton(onClick = {
+                                selectedFileUri = null
+                                showUploadOptions = true
+                            }) {
                                 Icon(Icons.Default.Close, contentDescription = "Clear")
                             }
                         }
                     }
-
-                    // Description
                     OutlinedTextField(
                         value = description,
                         onValueChange = { description = it },
                         label = { Text("Description (optional)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        maxLines = 3
+                        modifier = Modifier.fillMaxWidth()
                     )
-
-                    // Error message
                     if (uploadState is UploadNoteState.Error) {
                         Text(
                             text = (uploadState as UploadNoteState.Error).message,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
+                            color = MaterialTheme.colorScheme.error
                         )
                     }
                 }
@@ -1842,35 +1793,17 @@ fun UploadNoteDialogWithCamera(
                 Button(
                     onClick = {
                         selectedFileUri?.let { uri ->
-                            notesViewModel.uploadNote(
-                                fileUri = uri,
-                                courseId = courseId,
-                                description = if (description.isBlank()) "" else description,
-                                fileName = selectedFileName
-                            )
+                            notesViewModel.uploadNote(uri, courseId, description, selectedFileName)
                         }
                     },
                     enabled = selectedFileUri != null && uploadState !is UploadNoteState.Uploading
                 ) {
-                    if (uploadState is UploadNoteState.Uploading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    Text("Upload")
+                    Text(if (uploadState is UploadNoteState.Uploading) "Uploading..." else "Upload")
                 }
             }
         },
         dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                enabled = uploadState !is UploadNoteState.Uploading
-            ) {
-                Text("Cancel")
-            }
+            TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
 }
