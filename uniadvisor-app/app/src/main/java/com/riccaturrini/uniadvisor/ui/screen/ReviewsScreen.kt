@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.riccaturrini.uniadvisor.data.Review
@@ -214,21 +215,26 @@ fun ReviewCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Header with course ID and date
+            // Header con Titolo a Sinistra e Data a Destra
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Titolo del Corso (allineato a sinistra)
                 Text(
                     text = courseName,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f) // Consente al Titolo di occupare spazio
                 )
+
+                // Data (raw, non formattata, allineata a destra)
                 Text(
-                    text = review.created_at,
+                    text = review.created_at, // ⬅️ DATA RAW (non formattata)
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.End
                 )
             }
 
@@ -296,7 +302,6 @@ fun ReviewCard(
         }
     }
 }
-
 @Composable
 fun ReviewRatingRow(label: String, rating: Int) {
     Row(

@@ -86,11 +86,11 @@ TODO
 
 
 
--Mettere stelline di media del voto al posto del voto nella schermata "Faculty" che mostra tutti i corsi
+-Mettere stelline di media del voto al posto del voto nella schermata "Faculty" che mostra tutti i corsi        DONE
 
 
 
--Aggiungere la possibilità di vedere anche la "mezza stellina"
+-Aggiungere la possibilità di vedere anche la "mezza stellina"      DONE
 
 
 
@@ -98,27 +98,22 @@ TODO
 
 
 
--Coerenza con rating vicino alle stelline in tutti i punti dell'app (1.5 e non 1.5/5)
+-Coerenza con rating vicino alle stelline in tutti i punti dell'app (1.5 e non 1.5/5)       DONE
 
 
 
--In my reviews, mettere nome corso e non "Course #1"
-
-
-
--In course ratings, dentro a course details, mettere i numeri vicino alle stelline in grassetto
-
+-In my reviews, mettere nome corso e non "Course #1"        DONE
 
 
 -Aggiungere una matita per editare, ed eventualmente cancellare, le proprie note reviews
 
 
 
--rimuovere i timestamp dalle cose caricate, lasciare solo la data
+-rimuovere i timestamp dalle cose caricate, lasciare solo la data       DONE
 
 
 
--Mettere i colori nelle note, quindi rosso se è basso, giallo se nella media, verde se è top.
+-Mettere i colori nelle note, quindi rosso se è basso, giallo se nella media, verde se è top.       DONE
 
 
 

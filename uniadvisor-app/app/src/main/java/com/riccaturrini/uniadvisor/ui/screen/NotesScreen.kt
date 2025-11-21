@@ -17,6 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.swiperefresh.SwipeRefresh
@@ -216,6 +218,12 @@ fun NoteCard(
 ) {
     val context = LocalContext.current
 
+    // 1. Logica per la Data e il Titolo
+    val formattedDate = remember(note.created_at) {
+        formatReviewDate(note.created_at)
+    }
+    val noteTitle = (note.description ?: "").ifBlank { "Untitled Note" }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -226,13 +234,15 @@ fun NoteCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Header
+            // Header con Titolo (Descrizione) e Data
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Lato Sinistro: Icona e Titolo (Descrizione della nota)
                 Row(
+                    modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -242,27 +252,34 @@ fun NoteCard(
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
                     )
+                    // ⬅️ MODIFICA: La descrizione è il nuovo titolo
                     Text(
-                        text = "Note",
+                        text = noteTitle,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2, // Limita a due linee
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
+                // Data (allineata a destra)
                 Text(
-                    text = note.created_at,
+                    text = formattedDate, // ⬅️ MODIFICA: Data formattata
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.End
                 )
             }
 
-            // Description
+            // ⬅️ RIMOZIONE: La sezione Description è stata rimossa dal corpo della card.
+            /*
             if (!note.description.isNullOrBlank()) {
                 Text(
                     text = note.description,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
+            */
 
             HorizontalDivider()
 

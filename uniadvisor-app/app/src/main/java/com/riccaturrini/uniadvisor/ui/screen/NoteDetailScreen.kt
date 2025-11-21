@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.riccaturrini.uniadvisor.data.*
@@ -270,11 +271,25 @@ fun NoteDetailScreen(
     }
 }
 
+fun getBadgeColorForRating(rating: Double?): Color {
+    return when {
+        rating == null || rating <= 0.0 -> Color(0xFF9E9E9E) // Grigio: Rating non disponibile/nullo
+        rating >= 4.0 -> Color(0xFF4CAF50)                   // Verde: Ottimo (4.0 - 5.0)
+        rating >= 3.0 -> Color(0xFFFFC107)                   // Giallo/Arancio: Medio (3.0 - 3.9)
+        else -> Color(0xFFF44336)                            // Rosso: Basso (< 3.0)
+    }
+}
+
 @Composable
 fun NoteInfoCard(
     note: NoteWithRating,
     onViewPdf: () -> Unit
 ) {
+    val noteTitle = (note.description ?: "").ifBlank { "Untitled Note" }
+    val badgeColor = remember(note.average_rating) {
+        getBadgeColorForRating(note.average_rating)
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -288,7 +303,7 @@ fun NoteInfoCard(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header with icon
+            // Header
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -300,14 +315,14 @@ fun NoteInfoCard(
                     modifier = Modifier.size(32.dp)
                 )
                 Text(
-                    text = "Student Note",
+                    text = noteTitle,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
 
-            // Average Rating (if present)
+            // Average Rating
             if (note.average_rating != null && note.average_rating > 0) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
 
@@ -324,7 +339,7 @@ fun NoteInfoCard(
 
                     Surface(
                         shape = MaterialTheme.shapes.medium,
-                        color = Color(0xFFFFD700).copy(alpha = 0.3f)
+                        color = badgeColor.copy(alpha = 0.3f)
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -334,7 +349,7 @@ fun NoteInfoCard(
                             Icon(
                                 imageVector = Icons.Default.Star,
                                 contentDescription = null,
-                                tint = Color(0xFFFFD700),
+                                tint = badgeColor,
                                 modifier = Modifier.size(24.dp)
                             )
                             Text(
@@ -348,25 +363,6 @@ fun NoteInfoCard(
                 }
             }
 
-            // Description
-            if (!note.description.isNullOrBlank()) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
-
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "Description",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                    Text(
-                        text = note.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
-
-            // View PDF Button
             // View PDF Button
             Button(
                 onClick = onViewPdf,
@@ -389,6 +385,11 @@ fun NoteInfoCard(
 
 @Composable
 fun NoteReviewDetailCard(review: NoteRating) {
+    // 1. Formatta la data utilizzando la funzione LocalDateTime
+    val formattedDate = remember(review.created_at) {
+        formatReviewDate(review.created_at)
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -400,6 +401,12 @@ fun NoteReviewDetailCard(review: NoteRating) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Header with stars
+            // Date
+            Text(
+                text = formattedDate, // ⬅️ MODIFICATO: Usa la data formattata
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -430,7 +437,7 @@ fun NoteReviewDetailCard(review: NoteRating) {
                     }
                 ) {
                     Text(
-                        text = "${review.rating}/5",
+                        text = "${review.rating}.0",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
@@ -448,12 +455,7 @@ fun NoteReviewDetailCard(review: NoteRating) {
                 )
             }
 
-            // Date
-            Text(
-                text = review.created_at,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+
         }
     }
 }

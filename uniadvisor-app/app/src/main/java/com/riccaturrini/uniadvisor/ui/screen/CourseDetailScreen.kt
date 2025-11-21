@@ -26,8 +26,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.ui.text.style.TextOverflow
 import com.riccaturrini.uniadvisor.ui.activity.PdfViewerActivity
 import com.riccaturrini.uniadvisor.utils.openGoogleMaps
+import java.time.LocalDateTime
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1100,12 +1106,42 @@ fun StarRatingSelector(rating: Int, onRatingChange: (Int) -> Unit) {
         }
     }
 }
+fun formatReviewDate(isoDateString: String?): String {
+    if (isoDateString.isNullOrBlank()) {
+        return "Data sconosciuta"
+    }
 
+    // Pattern d'ingresso: corrisponde a YYYY-MM-DDTHH:MM:SS.SSSSSS
+    // 'T' è messo tra apici singoli perché è un carattere letterale
+    val inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSSSS")
+
+    return try {
+        // 1. Parsing: Analizza la stringa come LocalDateTime usando il pattern specifico.
+        val localDateTime = LocalDateTime.parse(isoDateString, inputFormatter)
+
+        // 2. Formattazione dell'OUTPUT.
+        val outputFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.ITALIAN)
+
+        // 3. Risultato
+        localDateTime.format(outputFormatter)
+    } catch (e: DateTimeParseException) {
+        // Fallback in caso di errore di parsing (es. se la stringa è vuota o il pattern cambia)
+        // Log.e("DataFormatter", "Errore nel parsing della data: $isoDateString", e) // Puoi aggiungere il Log qui
+        "Data non valida"
+    }
+}
 @Composable
 fun CourseNoteCard(
     note: NoteWithRating,
     onNoteClick: () -> Unit
 ) {
+    val badgeColor = remember(note.average_rating) {
+        getBadgeColorForRating(note.average_rating)
+    }
+    val formattedDate = remember(note.created_at) {
+        formatReviewDate(note.created_at)
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -1118,13 +1154,16 @@ fun CourseNoteCard(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Note Header with Rating
+            // Header Row: Titolo (Descrizione) e Stack Data/Rating
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Lato Sinistro: Icona e Titolo (Descrizione della nota)
                 Row(
+                    // Utilizza Modifier.weight per lasciare spazio al rating a destra
+                    modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -1134,50 +1173,61 @@ fun CourseNoteCard(
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
                     )
+                    // ⬅️ MODIFICA: La descrizione è il nuovo titolo
                     Text(
-                        text = "Student Note",
+                        text = (note.description ?: "").ifBlank { "Untitled Note" },
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2, // Limita a due linee
+                        overflow = TextOverflow.Ellipsis // Aggiunge i puntini se troncato
                     )
                 }
 
-                // Average rating badge (if present)
-                if (note.average_rating != null && note.average_rating > 0) {
-                    Surface(
-                        shape = MaterialTheme.shapes.small,
-                        color = Color(0xFFFFD700).copy(alpha = 0.2f)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                // Lato Destro: Data e Rating (impilati verticalmente)
+                Column(
+                    // ⬅️ NUOVO: Aggiunge uno Spacer per separare il titolo lungo dal rating
+                    modifier = Modifier.padding(start = 8.dp),
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // DATA FORMATTATA (Sempre visibile)
+                    Text(
+                        text = formattedDate,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+
+                    // Average rating badge (Visibile solo se esiste un rating valido)
+                    if (note.average_rating != null && note.average_rating > 0) {
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = badgeColor.copy(alpha = 0.2f)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = null,
-                                tint = Color(0xFFFFD700),
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Text(
-                                text = String.format("%.1f", note.average_rating),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF000000).copy(alpha = 0.8f)
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = badgeColor,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = String.format("%.1f", note.average_rating),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            // Note Description (preview)
-            if (!note.description.isNullOrBlank()) {
-                Text(
-                    text = note.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2
-                )
-            }
+            // ⬅️ RIMOZIONE: Il blocco di anteprima della descrizione è stato rimosso
+            // in quanto la descrizione è ora il titolo.
 
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
@@ -1427,8 +1477,25 @@ fun EmptyCourseReviewsCard() {
     }
 }
 
+// Funzione di utilità per formattare la data (DA INSERIRE FUORI DAL COMPONENTE)
+fun formatIsoDateOnly(isoDateString: String): String {
+    return try {
+        // Analizza la stringa come data/ora con fuso orario (ZonedDateTime)
+        val zonedDateTime = ZonedDateTime.parse(isoDateString)
+        // Formatta nel pattern desiderato: giorno/mese/anno
+        val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        zonedDateTime.format(formatter)
+    } catch (e: DateTimeParseException) {
+        // Ritorna un messaggio di errore o la stringa originale se l'analisi fallisce
+        "Data non disponibile"
+    }
+}
+
+
+
 @Composable
 fun CourseReviewCard(review: Review) {
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -1439,6 +1506,12 @@ fun CourseReviewCard(review: Review) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            Text(
+                text = review.created_at,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.align(Alignment.End) // Allinea a destra per default
+            )
             // Ratings
             Row(
                 modifier = Modifier.fillMaxWidth(),
