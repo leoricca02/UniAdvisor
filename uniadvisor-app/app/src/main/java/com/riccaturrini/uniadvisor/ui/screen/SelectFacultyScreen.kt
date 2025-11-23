@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.riccaturrini.uniadvisor.R
+import com.riccaturrini.uniadvisor.viewmodel.AuthViewModel
 import com.riccaturrini.uniadvisor.viewmodel.EnrollmentState
 import com.riccaturrini.uniadvisor.viewmodel.FacultyUiState
 import com.riccaturrini.uniadvisor.viewmodel.FacultyViewModel
@@ -22,6 +23,7 @@ import kotlinx.coroutines.delay
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SelectFacultyScreen(
+    authViewModel: AuthViewModel,
     facultyViewModel: FacultyViewModel = viewModel(),
     profileViewModel: ProfileViewModel = viewModel(),
     onFacultySelected: () -> Unit
@@ -32,14 +34,13 @@ fun SelectFacultyScreen(
     var expanded by remember { mutableStateOf(false) }
     var selectedFaculty by remember { mutableStateOf<String?>(null) }
     var selectedFacultyId by remember { mutableStateOf<Int?>(null) }
-    var hasNavigated by remember { mutableStateOf(false) }
+    var hasUpdateStarted by remember { mutableStateOf(false) }
 
-    // Naviga solo dopo successo enrollment
+    // Faculties
     LaunchedEffect(enrollState) {
-        if (enrollState is EnrollmentState.Success && !hasNavigated) {
-            hasNavigated = true
-            delay(200) // evita race con Android activity lifecycle
-            onFacultySelected()
+        if (enrollState is EnrollmentState.Success && !hasUpdateStarted) {
+            hasUpdateStarted = true
+            authViewModel.checkUserProfile()
         }
     }
 

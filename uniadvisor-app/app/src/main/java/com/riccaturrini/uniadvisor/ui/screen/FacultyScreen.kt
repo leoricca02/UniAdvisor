@@ -223,17 +223,17 @@ fun FacultyMainScreen(
     onCourseClick: (Int) -> Unit,
     onRefresh: () -> Unit
 ) {
-    Log.d("FacultyMainScreen", "🎨 Composing FacultyMainScreen")
-    Log.d("FacultyMainScreen", "📊 State: ${courseListState::class.simpleName}")
-    Log.d("FacultyMainScreen", "🏫 Faculty ID: $facultyId")
-
-    var courseSortOrder by remember { mutableStateOf("name_asc") } // name_asc, name_desc, rating_desc, rating_asc
+    var courseSortOrder by remember { mutableStateOf("name_asc") }
     var showCourseSortMenu by remember { mutableStateOf(false) }
+
+    // Stato per la ricerca
+    var searchQuery by remember { mutableStateOf("") }
+
     val context = LocalContext.current
 
     // Shake to refresh
     val shakeDetector = rememberShakeDetector {
-        onRefresh() // Triggers your existing refresh function
+        onRefresh()
     }
 
     Scaffold(
@@ -242,11 +242,13 @@ fun FacultyMainScreen(
                 title = {
                     Text(facultyName ?: "Select Faculty")
                 },
+                // ✅ COLORI RIPRISTINATI
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
                 actions = {
-                    // Map button - only show if location is available
+                    // Map button
                     if (facultyLatitude != null && facultyLongitude != null) {
                         IconButton(
                             onClick = {
@@ -270,7 +272,7 @@ fun FacultyMainScreen(
                         Icon(Icons.Default.FilterList, contentDescription = "Sort courses")
                     }
 
-                    // Menu for sorting courses
+                    // Sort Menu
                     DropdownMenu(
                         expanded = showCourseSortMenu,
                         onDismissRequest = { showCourseSortMenu = false }
@@ -282,9 +284,7 @@ fun FacultyMainScreen(
                                 showCourseSortMenu = false
                             },
                             leadingIcon = {
-                                if (courseSortOrder == "name_asc") {
-                                    Icon(Icons.Default.Check, contentDescription = null)
-                                }
+                                if (courseSortOrder == "name_asc") Icon(Icons.Default.Check, null)
                             }
                         )
                         DropdownMenuItem(
@@ -294,9 +294,7 @@ fun FacultyMainScreen(
                                 showCourseSortMenu = false
                             },
                             leadingIcon = {
-                                if (courseSortOrder == "name_desc") {
-                                    Icon(Icons.Default.Check, contentDescription = null)
-                                }
+                                if (courseSortOrder == "name_desc") Icon(Icons.Default.Check, null)
                             }
                         )
                         DropdownMenuItem(
@@ -306,9 +304,7 @@ fun FacultyMainScreen(
                                 showCourseSortMenu = false
                             },
                             leadingIcon = {
-                                if (courseSortOrder == "rating_desc") {
-                                    Icon(Icons.Default.Check, contentDescription = null)
-                                }
+                                if (courseSortOrder == "rating_desc") Icon(Icons.Default.Check, null)
                             }
                         )
                         DropdownMenuItem(
@@ -318,9 +314,7 @@ fun FacultyMainScreen(
                                 showCourseSortMenu = false
                             },
                             leadingIcon = {
-                                if (courseSortOrder == "rating_asc") {
-                                    Icon(Icons.Default.Check, contentDescription = null)
-                                }
+                                if (courseSortOrder == "rating_asc") Icon(Icons.Default.Check, null)
                             }
                         )
                     }
@@ -334,7 +328,6 @@ fun FacultyMainScreen(
     ) { paddingValues ->
         when {
             facultyId == null -> {
-                Log.d("FacultyMainScreen", "⚠️ No faculty ID - showing selection prompt")
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -365,7 +358,6 @@ fun FacultyMainScreen(
             }
 
             courseListState is CourseListState.Loading -> {
-                Log.d("FacultyMainScreen", "⏳ Showing loading state")
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -377,7 +369,6 @@ fun FacultyMainScreen(
             }
 
             courseListState is CourseListState.Error -> {
-                Log.d("FacultyMainScreen", "❌ Showing error state")
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -414,80 +405,100 @@ fun FacultyMainScreen(
 
             courseListState is CourseListState.Success -> {
                 val courses = (courseListState as CourseListState.Success).courses
-                Log.d("FacultyMainScreen", "✅ Success state with ${courses.size} courses")
 
-                if (courses.isEmpty()) {
-                    Log.d("FacultyMainScreen", "📭 No courses available")
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.MenuBook,
-                                contentDescription = null,
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = "No Courses Available",
-                                style = MaterialTheme.typography.titleLarge
-                            )
-                            Text(
-                                text = "Check back later for new courses",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                } else {
-                    Log.d("FacultyMainScreen", "📚 About to render LazyColumn with ${courses.size} courses")
-
-                    // sort courses based on courseSortOrder
-                    val sortedCourses = remember(courses, courseSortOrder) {
-                        when (courseSortOrder) {
-                            "name_asc" -> courses.sortedBy { it.course.name }
-                            "name_desc" -> courses.sortedByDescending { it.course.name }
-                            "rating_desc" -> courses.sortedByDescending {
-                                (it.avgClarity + it.avgFeasibility + it.avgAvailability) / 3.0
-                            }
-                            "rating_asc" -> courses.sortedBy {
-                                (it.avgClarity + it.avgFeasibility + it.avgAvailability) / 3.0
-                            }
-                            else -> courses
+                // Logica di Filtro e Ordinamento
+                val processedCourses = remember(courses, courseSortOrder, searchQuery) {
+                    val filtered = if (searchQuery.isBlank()) courses else {
+                        courses.filter {
+                            it.course.name.contains(searchQuery, ignoreCase = true) ||
+                                    it.teacherName.contains(searchQuery, ignoreCase = true)
                         }
                     }
 
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(sortedCourses) { courseWithRatings ->
-                            Log.d("FacultyMainScreen", "🎓 Rendering course: ${courseWithRatings.course.name}")
+                    when (courseSortOrder) {
+                        "name_asc" -> filtered.sortedBy { it.course.name }
+                        "name_desc" -> filtered.sortedByDescending { it.course.name }
+                        "rating_desc" -> filtered.sortedByDescending {
+                            (it.avgClarity + it.avgFeasibility + it.avgAvailability) / 3.0
+                        }
+                        "rating_asc" -> filtered.sortedBy {
+                            (it.avgClarity + it.avgFeasibility + it.avgAvailability) / 3.0
+                        }
+                        else -> filtered
+                    }
+                }
 
-                            CourseCard(
-                                courseName = courseWithRatings.course.name,
-                                teacherName = courseWithRatings.teacherName,
-                                avgClarity = courseWithRatings.avgClarity,
-                                avgFeasibility = courseWithRatings.avgFeasibility,
-                                avgAvailability = courseWithRatings.avgAvailability,
-                                onClick = {
-                                    Log.d("FacultyMainScreen", "👆 Course clicked: ${courseWithRatings.course.id}")
-                                    onCourseClick(courseWithRatings.course.id)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                ) {
+                    // Barra di ricerca
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        placeholder = { Text("Search courses or professors...") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        trailingIcon = if (searchQuery.isNotEmpty()) {
+                            {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Clear")
                                 }
-                            )
+                            }
+                        } else null,
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.medium
+                    )
+
+                    if (processedCourses.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if(courses.isEmpty()) Icons.Default.MenuBook else Icons.Default.SearchOff,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(64.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                )
+                                Text(
+                                    text = if (courses.isEmpty()) "No Courses Available" else "No courses found",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .weight(1f),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(processedCourses) { courseWithRatings ->
+                                CourseCard(
+                                    courseName = courseWithRatings.course.name,
+                                    teacherName = courseWithRatings.teacherName,
+                                    avgClarity = courseWithRatings.avgClarity,
+                                    avgFeasibility = courseWithRatings.avgFeasibility,
+                                    avgAvailability = courseWithRatings.avgAvailability,
+                                    onClick = {
+                                        onCourseClick(courseWithRatings.course.id)
+                                    }
+                                )
+                            }
                         }
                     }
-
-                    Log.d("FacultyMainScreen", "✅ LazyColumn composition completed")
                 }
             }
         }

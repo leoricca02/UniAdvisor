@@ -220,8 +220,11 @@ fun SignUpScreen(
                         }
 
                         Box(modifier = Modifier.weight(1f)) {
-                            DropdownSelector("Year", selectedYear.toString(), years.map { it.toString() }) {
-                                selectedYear = it
+                            DropdownSelector("Year", selectedYear.toString(), years.map { it.toString() }) { selectedIndex ->
+                                val listIndex = selectedIndex - 1
+                                if (listIndex in years.indices) {
+                                    selectedYear = years[listIndex]
+                                }
                             }
                         }
                     }

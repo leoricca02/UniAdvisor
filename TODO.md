@@ -86,52 +86,55 @@ TODO
 
 
 
--Mettere stelline di media del voto al posto del voto nella schermata "Faculty" che mostra tutti i corsi        DONE
+###### -Mettere stelline di media del voto al posto del voto nella schermata "Faculty" che mostra tutti i corsi        DONE
+
+###### 
+
+###### -Aggiungere la possibilità di vedere anche la "mezza stellina"      DONE
+
+###### 
+
+###### -Aggiungere l'obbligo di vedere il nome di chi ha caricato la nota
+
+###### 
+
+###### -Coerenza con rating vicino alle stelline in tutti i punti dell'app (1.5 e non 1.5/5)       DONE
+
+###### 
+
+###### -In my reviews, mettere nome corso e non "Course #1"        DONE
+
+###### 
+
+###### -Aggiungere una matita per editare, ed eventualmente cancellare, le proprie note reviews
+
+###### 
+
+###### -rimuovere i timestamp dalle cose caricate, lasciare solo la data       DONE
+
+###### 
+
+###### -Mettere i colori nelle note, quindi rosso se è basso, giallo se nella media, verde se è top.       DONE
 
 
 
--Aggiungere la possibilità di vedere anche la "mezza stellina"      DONE
+###### -quando registro un utente, scelgo la facoltà e vado su "Your Faculty" ancora sta su "Select Faculty - No faculty selected, please select  faculty in your profile". Se la cambio e poi la ricambio dal mio profilo allora funziona. DONE
 
 
 
--Aggiungere l'obbligo di vedere il nome di chi ha caricato la nota
+###### -aggiungere filtro alle reviews delle note DONE
 
 
 
--Coerenza con rating vicino alle stelline in tutti i punti dell'app (1.5 e non 1.5/5)       DONE
-
-
-
--In my reviews, mettere nome corso e non "Course #1"        DONE
-
-
--Aggiungere una matita per editare, ed eventualmente cancellare, le proprie note reviews
-
-
-
--rimuovere i timestamp dalle cose caricate, lasciare solo la data       DONE
-
-
-
--Mettere i colori nelle note, quindi rosso se è basso, giallo se nella media, verde se è top.       DONE
-
-
-
--controllare problema con nuova registrazione (non prende la facoltà, la prende solo se la cambio e poi la ricambio)
-
--nuovo login "non google"--> completa profilo e non va bene
-
-
-
--aggiungere filtro alle reviews delle note
-
-
-
--feature aggiuntiva: inserire una barra di ricerca per cercare i corsi
+###### -feature aggiuntiva: inserire una barra di ricerca per cercare i corsi DONE
 
 
 
 -testare shake features
+
+
+
+###### -in fase di registrazione, non funziona bene la scelta dell'anno di nascita, anche se scelgo un anno tipo "2004" mi seleziona "7", oppure se scelgo "2002" mi seleziona "9" e così via DONE
 
 
 

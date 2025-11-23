@@ -34,7 +34,7 @@ fun NoteDetailScreen(
 ) {
     val context = LocalContext.current
 
-    // State for note details and reviews
+    // State per note e recensioni
     var note by remember { mutableStateOf<NoteWithRating?>(null) }
     var reviews by remember { mutableStateOf<List<NoteRating>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -43,47 +43,54 @@ fun NoteDetailScreen(
     var showRateDialog by remember { mutableStateOf(false) }
     val noteRatingState by courseDetailViewModel.noteRatingState.collectAsState()
 
-    // Load note and reviews
+    // --- NUOVO: Stati per il filtro ---
+    var sortOrder by remember { mutableStateOf("newest") } // opzioni: newest, oldest, best, worst
+    var showSortMenu by remember { mutableStateOf(false) }
+
+    // --- NUOVO: Logica di ordinamento ---
+    val sortedReviews = remember(reviews, sortOrder) {
+        when (sortOrder) {
+            "newest" -> reviews.sortedByDescending { it.created_at }
+            "oldest" -> reviews.sortedBy { it.created_at }
+            "best" -> reviews.sortedByDescending { it.rating }
+            "worst" -> reviews.sortedBy { it.rating }
+            else -> reviews
+        }
+    }
+
+    // Load note and reviews (Codice esistente invariato...)
     LaunchedEffect(noteId) {
         isLoading = true
         errorMessage = null
         try {
-            // Load note details (we need to get this from the course)
             val courseResponse = ApiClient.instance.getNotesWithRatings(courseId)
             if (courseResponse.isSuccessful && courseResponse.body() != null) {
                 note = courseResponse.body()!!.find { it.id == noteId }
-                if (note == null) {
-                    errorMessage = "Note not found"
-                }
+                if (note == null) errorMessage = "Note not found"
             } else {
                 errorMessage = "Failed to load note"
             }
 
-            // Load reviews
             val reviewsResponse = ApiClient.instance.getNoteReviews(noteId)
             if (reviewsResponse.isSuccessful && reviewsResponse.body() != null) {
                 reviews = reviewsResponse.body()!!
-                Log.d("NoteDetailScreen", "✅ Loaded ${reviews.size} reviews")
             }
         } catch (e: Exception) {
-            Log.e("NoteDetailScreen", "Error loading note details", e)
             errorMessage = e.message ?: "Connection error"
         } finally {
             isLoading = false
         }
     }
 
-    // Handle rating success
+    // Handle rating success (Codice esistente invariato...)
     LaunchedEffect(noteRatingState) {
         if (noteRatingState is NoteRatingState.Success) {
             showRateDialog = false
-            // Reload reviews
             try {
                 val reviewsResponse = ApiClient.instance.getNoteReviews(noteId)
                 if (reviewsResponse.isSuccessful && reviewsResponse.body() != null) {
                     reviews = reviewsResponse.body()!!
                 }
-                // Reload note to update average rating
                 val courseResponse = ApiClient.instance.getNotesWithRatings(courseId)
                 if (courseResponse.isSuccessful && courseResponse.body() != null) {
                     note = courseResponse.body()!!.find { it.id == noteId }
@@ -104,6 +111,39 @@ fun NoteDetailScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
+                // --- NUOVO: Action Menu per il Sort ---
+                actions = {
+                    Box {
+                        IconButton(onClick = { showSortMenu = true }) {
+                            Icon(Icons.Default.FilterList, contentDescription = "Sort Reviews")
+                        }
+                        DropdownMenu(
+                            expanded = showSortMenu,
+                            onDismissRequest = { showSortMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("📅 Newest first") },
+                                onClick = { sortOrder = "newest"; showSortMenu = false },
+                                leadingIcon = { if(sortOrder == "newest") Icon(Icons.Default.Check, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("📅 Oldest first") },
+                                onClick = { sortOrder = "oldest"; showSortMenu = false },
+                                leadingIcon = { if(sortOrder == "oldest") Icon(Icons.Default.Check, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("⭐ Highest rated") },
+                                onClick = { sortOrder = "best"; showSortMenu = false },
+                                leadingIcon = { if(sortOrder == "best") Icon(Icons.Default.Check, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("⭐ Lowest rated") },
+                                onClick = { sortOrder = "worst"; showSortMenu = false },
+                                leadingIcon = { if(sortOrder == "worst") Icon(Icons.Default.Check, null) }
+                            )
+                        }
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -111,53 +151,16 @@ fun NoteDetailScreen(
             )
         }
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
+        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             when {
-                isLoading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                }
-
-                errorMessage != null -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.padding(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Error,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(64.dp)
-                            )
-                            Text(
-                                text = errorMessage!!,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    }
-                }
-
+                isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                errorMessage != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(errorMessage!!, color = MaterialTheme.colorScheme.error) }
                 note != null -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Note Info Card
                         item {
                             NoteInfoCard(
                                 note = note!!,
@@ -170,100 +173,45 @@ fun NoteDetailScreen(
                             )
                         }
 
-                        // Rate Button
                         item {
                             Button(
                                 onClick = { showRateDialog = true },
                                 modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary
-                                )
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Star,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Icon(Icons.Default.Star, null, modifier = Modifier.size(20.dp))
+                                Spacer(Modifier.width(8.dp))
                                 Text("Rate this Note")
                             }
                         }
 
-                        // Reviews Section Header
+                        // Reviews Header
                         item {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Reviews (${reviews.size})",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
+                            Text(
+                                text = "Reviews (${reviews.size})",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
 
-                        // Reviews List
-                        if (reviews.isEmpty()) {
+                        // Reviews List (Usando sortedReviews)
+                        if (sortedReviews.isEmpty()) {
                             item {
-                                Card(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                                    )
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(32.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.RateReview,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(48.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Text(
-                                            text = "No reviews yet",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = "Be the first to review this note!",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
+                                Text("No reviews yet. Be the first!", style = MaterialTheme.typography.bodyMedium)
                             }
                         } else {
-                            items(reviews) { review ->
+                            items(sortedReviews) { review ->
                                 NoteReviewDetailCard(review = review)
                             }
                         }
-
-                        // Bottom spacing
-                        item {
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
+                        item { Spacer(Modifier.height(16.dp)) }
                     }
                 }
             }
 
-            // Rate Dialog
             if (showRateDialog) {
                 RateNoteDialog(
-                    onDismiss = {
-                        showRateDialog = false
-                        courseDetailViewModel.resetNoteRatingState()
-                    },
-                    onConfirm = { rating, comment ->
-                        courseDetailViewModel.addNoteRating(courseId, noteId, rating, comment)
-                    },
+                    onDismiss = { showRateDialog = false; courseDetailViewModel.resetNoteRatingState() },
+                    onConfirm = { rating, comment -> courseDetailViewModel.addNoteRating(courseId, noteId, rating, comment) },
                     noteRatingState = noteRatingState
                 )
             }
