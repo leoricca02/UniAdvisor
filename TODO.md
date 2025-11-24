@@ -82,7 +82,7 @@ TODO
 
 
 
--Mettere tasto "Browse faculties", come funzionalità extra, per esplorare le altre facoltà senza dover cambiare la facoltà dal "Profilo"
+##### -Mettere tasto "Browse faculties", come funzionalità extra, per esplorare le altre facoltà senza dover cambiare la facoltà dal "Profilo" DONE
 
 
 
@@ -139,4 +139,6 @@ TODO
 
 
 ###### -modificare la "course page" --> è sviluppata troppo verticalmente, aggiungere due shortcut dopo gli average rating del corso "See Course Reviews" e "See Course Notes" DONE
+
+-vedere se è possibile introdurre il nome di chi ha scritto la note quando si visualizzano le note di un corso
 
