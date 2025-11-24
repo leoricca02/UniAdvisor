@@ -7,6 +7,7 @@ import com.riccaturrini.uniadvisor.data.*
 import com.riccaturrini.uniadvisor.network.ApiClient
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class CourseDetailData(
@@ -16,7 +17,7 @@ data class CourseDetailData(
     val avgFeasibility: Double,
     val avgAvailability: Double,
     val reviews: List<Review>,
-    val notes: List<NoteWithRating> // ✅ UPDATED: Now using NoteWithRating
+    val notes: List<NoteWithRating>
 )
 
 sealed class CourseDetailState {
@@ -32,7 +33,6 @@ sealed class AddReviewState {
     data class Error(val message: String) : AddReviewState()
 }
 
-// ✅ NEW: State for note rating
 sealed class NoteRatingState {
     object Idle : NoteRatingState()
     object Loading : NoteRatingState()
@@ -45,14 +45,41 @@ class CourseDetailViewModel : ViewModel() {
     private val apiService = ApiClient.instance
 
     private val _courseDetailState = MutableStateFlow<CourseDetailState>(CourseDetailState.Loading)
-    val courseDetailState: StateFlow<CourseDetailState> = _courseDetailState
+    val courseDetailState: StateFlow<CourseDetailState> = _courseDetailState.asStateFlow()
 
     private val _addReviewState = MutableStateFlow<AddReviewState>(AddReviewState.Idle)
-    val addReviewState: StateFlow<AddReviewState> = _addReviewState
+    val addReviewState: StateFlow<AddReviewState> = _addReviewState.asStateFlow()
 
-    // ✅ NEW: Note rating state
+    // Note rating state
     private val _noteRatingState = MutableStateFlow<NoteRatingState>(NoteRatingState.Idle)
-    val noteRatingState: StateFlow<NoteRatingState> = _noteRatingState
+    val noteRatingState: StateFlow<NoteRatingState> = _noteRatingState.asStateFlow()
+
+    // Current user id (null if not loaded yet)
+    private val _currentUserId = MutableStateFlow<Int?>(null)
+    val currentUserId: StateFlow<Int?> = _currentUserId.asStateFlow()
+
+    init {
+        // Load current user id once ViewModel is created
+        loadCurrentUser()
+    }
+
+    private fun loadCurrentUser() {
+        viewModelScope.launch {
+            try {
+                val response = apiService.getMyProfile()
+                if (response.isSuccessful && response.body() != null) {
+                    val user = response.body()!!
+                    // Se UserResponse ha 'id' come Int
+                    _currentUserId.value = user.id
+                    Log.d("CourseDetailVM", "Loaded current user id: ${user.id}")
+                } else {
+                    Log.w("CourseDetailVM", "Could not load current user profile: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e("CourseDetailVM", "Error loading current user", e)
+            }
+        }
+    }
 
     /**
      * Load complete course details including teacher, ratings, reviews, and notes with ratings
@@ -76,11 +103,8 @@ class CourseDetailViewModel : ViewModel() {
                 // Get teacher
                 val teacherResponse = apiService.getCourseTeacher(courseId)
                 val teacherName = if (teacherResponse.isSuccessful) {
-                    (teacherResponse.body()?.get("name") as? String)?.also {
-                        Log.d("CourseDetailVM", "✅ Teacher loaded: $it")
-                    } ?: "N/A"
+                    (teacherResponse.body()?.get("name") as? String) ?: "N/A"
                 } else {
-                    Log.w("CourseDetailVM", "⚠️ Teacher not found")
                     "N/A"
                 }
 
@@ -92,36 +116,24 @@ class CourseDetailViewModel : ViewModel() {
                         (ratings?.get("average_clarity") as? Number)?.toDouble() ?: 0.0,
                         (ratings?.get("average_feasibility") as? Number)?.toDouble() ?: 0.0,
                         (ratings?.get("average_availability") as? Number)?.toDouble() ?: 0.0
-                    ).also {
-                        Log.d("CourseDetailVM", "✅ Ratings loaded: clarity=${it.first}, feasibility=${it.second}, availability=${it.third}")
-                    }
+                    )
                 } else {
-                    Log.w("CourseDetailVM", "⚠️ No ratings found (${ratingsResponse.code()})")
                     Triple(0.0, 0.0, 0.0)
                 }
 
                 // Get reviews
                 val reviewsResponse = apiService.getCourseReviews(courseId)
                 val reviews = if (reviewsResponse.isSuccessful && reviewsResponse.body() != null) {
-                    reviewsResponse.body()!!.also {
-                        Log.d("CourseDetailVM", "✅ Loaded ${it.size} reviews")
-                    }
+                    reviewsResponse.body()!!
                 } else {
-                    Log.w("CourseDetailVM", "⚠️ No reviews found (${reviewsResponse.code()})")
                     emptyList()
                 }
 
-                // ✅ UPDATED: Get notes WITH ratings, sorted by rating (best first)
+                // Get notes WITH ratings
                 val notesResponse = apiService.getNotesWithRatings(courseId, order = noteSortOrder)
                 val notes = if (notesResponse.isSuccessful && notesResponse.body() != null) {
-                    notesResponse.body()!!.also {
-                        Log.d("CourseDetailVM", "✅ Loaded ${it.size} notes with ratings")
-                        it.forEach { note ->
-                            Log.d("CourseDetailVM", "   Note ${note.id}: avg rating = ${note.average_rating}")
-                        }
-                    }
+                    notesResponse.body()!!
                 } else {
-                    Log.w("CourseDetailVM", "⚠️ No notes found (${notesResponse.code()})")
                     emptyList()
                 }
 
@@ -133,7 +145,7 @@ class CourseDetailViewModel : ViewModel() {
                         avgFeasibility = avgFeasibility,
                         avgAvailability = avgAvailability,
                         reviews = reviews,
-                        notes = notes // ✅ Now with ratings!
+                        notes = notes
                     )
                 )
 
@@ -176,7 +188,7 @@ class CourseDetailViewModel : ViewModel() {
         }
     }
 
-    // ✅ NEW: Add rating to a note
+    // Add rating to a note
     fun addNoteRating(courseId: Int, noteId: Int, rating: Int, comment: String? = null) {
         viewModelScope.launch {
             _noteRatingState.value = NoteRatingState.Loading
@@ -194,8 +206,6 @@ class CourseDetailViewModel : ViewModel() {
                 if (response.isSuccessful) {
                     Log.d("CourseDetailVM", "✅ Note rating added successfully")
                     _noteRatingState.value = NoteRatingState.Success
-                    // Reload course details to show updated ratings
-                    // loadCourseDetail(courseId)
                 } else {
                     val errorMsg = when (response.code()) {
                         403 -> "You cannot rate your own note"
@@ -208,6 +218,42 @@ class CourseDetailViewModel : ViewModel() {
             } catch (e: Exception) {
                 val errorMsg = e.message ?: "Connection error"
                 Log.e("CourseDetailVM", "💥 Error adding note rating: $errorMsg", e)
+                _noteRatingState.value = NoteRatingState.Error(errorMsg)
+            }
+        }
+    }
+
+    /**
+     * Update an existing note rating (only allowed by the author)
+     */
+    fun updateNoteReview(
+        ratingId: Int,
+        rating: Int,
+        comment: String?
+    ) {
+        viewModelScope.launch {
+            _noteRatingState.value = NoteRatingState.Loading
+            try {
+                Log.d("CourseDetailVM", "✏️ Updating rating $ratingId -> rating=$rating comment=${comment ?: ""}")
+
+                val ratingUpdate = NoteRatingUpdate(
+                    rating = rating,
+                    comment = comment
+                )
+
+                val response = apiService.updateNoteRating(ratingId, ratingUpdate)
+
+                if (response.isSuccessful && response.body() != null) {
+                    Log.d("CourseDetailVM", "✅ Note rating updated successfully")
+                    _noteRatingState.value = NoteRatingState.Success
+                } else {
+                    val err = "Failed to update rating: ${response.code()}"
+                    Log.e("CourseDetailVM", "❌ $err")
+                    _noteRatingState.value = NoteRatingState.Error(err)
+                }
+            } catch (e: Exception) {
+                val errorMsg = e.message ?: "Connection error"
+                Log.e("CourseDetailVM", "💥 Error updating note rating: $errorMsg", e)
                 _noteRatingState.value = NoteRatingState.Error(errorMsg)
             }
         }

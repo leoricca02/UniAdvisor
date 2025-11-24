@@ -106,6 +106,8 @@ interface ApiService {
     @GET("notes/notes/{note_id}/reviews")
     suspend fun getNoteReviews(@Path("note_id") noteId: Int): retrofit2.Response<List<NoteRating>>
 
+
+
     // ============================================
     // LOCATION & MAP ENDPOINTS
     // ============================================
