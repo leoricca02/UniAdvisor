@@ -140,3 +140,15 @@ TODO
 
 ###### -modificare la "course page" --> è sviluppata troppo verticalmente, aggiungere due shortcut dopo gli average rating del corso "See Course Reviews" e "See Course Notes" DONE
 
+
+
+-Magnetometer \& Accelerometer/Gyroscope (Provide an accurate on-campus navigation tool. Users can hold their phone flat, and a compass overlay points them to their next class or a specific building. The PDF mentions using the gyroscope and accelerometer for orientation)
+
+
+
+-Ambient Light Sensor (Automatically switch your in-app note or PDF viewer (PdfViewerActivity.kt) between light mode and a comfortable dark mode based on the ambient light level.)
+
+
+
+-feature --> how many people there are in a room
+
