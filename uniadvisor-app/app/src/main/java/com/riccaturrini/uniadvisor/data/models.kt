@@ -128,6 +128,7 @@ data class NoteCreate(
     val description: String?
 )
 
+
 /**
  * Represents a captured image with its URI and extracted text
  */

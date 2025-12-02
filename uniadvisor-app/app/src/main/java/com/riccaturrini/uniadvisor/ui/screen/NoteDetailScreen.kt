@@ -1,7 +1,6 @@
 package com.riccaturrini.uniadvisor.ui.screen
 
 import android.content.Intent
-import android.net.Uri
 import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,11 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.riccaturrini.uniadvisor.data.*
-import com.riccaturrini.uniadvisor.viewmodel.*
+import com.riccaturrini.uniadvisor.viewmodel.CourseDetailViewModel
+import com.riccaturrini.uniadvisor.viewmodel.NoteRatingState
 import com.riccaturrini.uniadvisor.network.ApiClient
 import com.riccaturrini.uniadvisor.ui.activity.PdfViewerActivity
 
@@ -46,6 +45,13 @@ fun NoteDetailScreen(
     // --- NUOVO: Stati per il filtro ---
     var sortOrder by remember { mutableStateOf("newest") } // opzioni: newest, oldest, best, worst
     var showSortMenu by remember { mutableStateOf(false) }
+
+    // Stati per edit review
+    var editReviewState by remember { mutableStateOf<NoteRating?>(null) }
+    var showEditDialog by remember { mutableStateOf(false) }
+
+    // current user id (può essere null se non ancora caricato)
+    val currentUserId by courseDetailViewModel.currentUserId.collectAsState()
 
     // --- NUOVO: Logica di ordinamento ---
     val sortedReviews = remember(reviews, sortOrder) {
@@ -82,7 +88,7 @@ fun NoteDetailScreen(
         }
     }
 
-    // Handle rating success (Codice esistente invariato...)
+    // Handle rating/update success -> reload reviews and note summary
     LaunchedEffect(noteRatingState) {
         if (noteRatingState is NoteRatingState.Success) {
             showRateDialog = false
@@ -96,7 +102,7 @@ fun NoteDetailScreen(
                     note = courseResponse.body()!!.find { it.id == noteId }
                 }
             } catch (e: Exception) {
-                Log.e("NoteDetailScreen", "Error reloading after rating", e)
+                Log.e("NoteDetailScreen", "Error reloading after rating/update", e)
             }
             courseDetailViewModel.resetNoteRatingState()
         }
@@ -200,7 +206,14 @@ fun NoteDetailScreen(
                             }
                         } else {
                             items(sortedReviews) { review ->
-                                NoteReviewDetailCard(review = review)
+                                NoteReviewDetailCard(
+                                    review = review,
+                                    currentUserId = currentUserId,
+                                    onEditReview = {
+                                        editReviewState = it
+                                        showEditDialog = true
+                                    }
+                                )
                             }
                         }
                         item { Spacer(Modifier.height(16.dp)) }
@@ -213,6 +226,27 @@ fun NoteDetailScreen(
                     onDismiss = { showRateDialog = false; courseDetailViewModel.resetNoteRatingState() },
                     onConfirm = { rating, comment -> courseDetailViewModel.addNoteRating(courseId, noteId, rating, comment) },
                     noteRatingState = noteRatingState
+                )
+            }
+
+            // Edit dialog
+            if (showEditDialog && editReviewState != null) {
+                EditReviewDialog(
+                    review = editReviewState!!,
+                    onDismiss = {
+                        showEditDialog = false
+                        editReviewState = null
+                    },
+                    onConfirm = { newRating, newComment ->
+                        // Use ViewModel to call update endpoint
+                        courseDetailViewModel.updateNoteReview(
+                            ratingId = editReviewState!!.id,
+                            rating = newRating,
+                            comment = newComment
+                        )
+                        showEditDialog = false
+                        editReviewState = null
+                    }
                 )
             }
         }
@@ -272,7 +306,7 @@ fun NoteInfoCard(
 
             // Average Rating
             if (note.average_rating != null && note.average_rating > 0) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
+                Divider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -331,9 +365,16 @@ fun NoteInfoCard(
     }
 }
 
+/**
+ * Composable che mostra la singola review + icona matita per l'autore.
+ * Modificata per accettare currentUserId e onEditReview.
+ */
 @Composable
-fun NoteReviewDetailCard(review: NoteRating) {
-    // 1. Formatta la data utilizzando la funzione LocalDateTime
+fun NoteReviewDetailCard(
+    review: NoteRating,
+    currentUserId: Int?,
+    onEditReview: (NoteRating) -> Unit
+) {
     val formattedDate = remember(review.created_at) {
         formatReviewDate(review.created_at)
     }
@@ -348,62 +389,128 @@ fun NoteReviewDetailCard(review: NoteRating) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Header with stars
-            // Date
-            Text(
-                text = formattedDate, // ⬅️ MODIFICATO: Usa la data formattata
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // Top row: Data a sinistra, Matita + Badge a destra
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Star rating display
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    repeat(5) { index ->
-                        Icon(
-                            imageVector = if (index < review.rating) Icons.Default.Star else Icons.Outlined.StarOutline,
-                            contentDescription = null,
-                            tint = if (index < review.rating) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(24.dp)
+                // Data a sinistra
+                Text(
+                    text = formattedDate,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // Matita + Badge a destra
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Matita solo se currentUser è autore
+                    if (currentUserId != null && review.student_id == currentUserId) {
+                        IconButton(onClick = { onEditReview(review) }) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Edit Review",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    // Badge rating subito dopo la matita
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = when {
+                            review.rating >= 4 -> Color(0xFF4CAF50).copy(alpha = 0.2f)
+                            review.rating >= 3 -> Color(0xFFFFC107).copy(alpha = 0.2f)
+                            else -> Color(0xFFF44336).copy(alpha = 0.2f)
+                        }
+                    ) {
+                        Text(
+                            text = "${review.rating}.0",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                         )
                     }
                 }
+            }
 
-                // Rating badge
-                Surface(
-                    shape = MaterialTheme.shapes.small,
-                    color = when {
-                        review.rating >= 4 -> Color(0xFF4CAF50).copy(alpha = 0.2f)
-                        review.rating >= 3 -> Color(0xFFFFC107).copy(alpha = 0.2f)
-                        else -> Color(0xFFF44336).copy(alpha = 0.2f)
-                    }
-                ) {
-                    Text(
-                        text = "${review.rating}.0",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+            // Star rating sotto
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                repeat(5) { index ->
+                    Icon(
+                        imageVector = if (index < review.rating) Icons.Default.Star else Icons.Outlined.StarOutline,
+                        contentDescription = null,
+                        tint = if (index < review.rating) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
 
-            // Comment
+            // Commento
             if (!review.comment.isNullOrBlank()) {
-                HorizontalDivider()
+                Divider()
                 Text(
                     text = review.comment,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-
-
         }
     }
+}
+
+
+
+
+/**
+ * Dialog per modificare una review (rating + comment) con valori precompilati
+ */
+@Composable
+fun EditReviewDialog(
+    review: NoteRating,
+    onDismiss: () -> Unit,
+    onConfirm: (rating: Int, comment: String) -> Unit
+) {
+    var newRating by remember { mutableStateOf(review.rating) }
+    var newComment by remember { mutableStateOf(review.comment ?: "") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Review") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row {
+                    repeat(5) { index ->
+                        IconButton(onClick = { newRating = index + 1 }) {
+                            Icon(
+                                imageVector = if (index < newRating) Icons.Default.Star else Icons.Outlined.StarOutline,
+                                contentDescription = null,
+                                tint = if (index < newRating) Color(0xFFFFD700) else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    value = newComment,
+                    onValueChange = { newComment = it },
+                    label = { Text("Comment") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = false
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(newRating, newComment) }) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

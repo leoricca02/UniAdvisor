@@ -82,7 +82,7 @@ TODO
 
 
 
--Mettere tasto "Browse faculties", come funzionalità extra, per esplorare le altre facoltà senza dover cambiare la facoltà dal "Profilo"
+##### -Mettere tasto "Browse faculties", come funzionalità extra, per esplorare le altre facoltà senza dover cambiare la facoltà dal "Profilo" DONE
 
 
 
@@ -140,6 +140,7 @@ TODO
 
 ###### -modificare la "course page" --> è sviluppata troppo verticalmente, aggiungere due shortcut dopo gli average rating del corso "See Course Reviews" e "See Course Notes" DONE
 
+<<<<<<< HEAD
 
 
 -Magnetometer \& Accelerometer/Gyroscope (Provide an accurate on-campus navigation tool. Users can hold their phone flat, and a compass overlay points them to their next class or a specific building. The PDF mentions using the gyroscope and accelerometer for orientation)
@@ -151,4 +152,7 @@ TODO
 
 
 -new feature --> how many people there are in a room
+=======
+-vedere se è possibile introdurre il nome di chi ha scritto la note quando si visualizzano le note di un corso
+>>>>>>> origin/main
 
