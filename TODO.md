@@ -150,5 +150,5 @@ TODO
 
 
 
--feature --> how many people there are in a room
+-new feature --> how many people there are in a room
 
