@@ -112,13 +112,27 @@ fun UniAdvisorApp() {
         }
 
         composable("dashboard") {
-            Log.d("DEBUG_NAV", "🎨 Rendering Screen: DASHBOARD")
+
             DashboardScreen(
                 authViewModel = authViewModel,
+                // AGGIUNGI QUESTA RIGA: Passiamo la navigazione del main controller alla dashboard
+                onNavigate = { route -> navController.navigate(route) },
                 onLogout = {
                     authViewModel.signOut()
                     navController.navigate("login") { popUpTo("dashboard") { inclusive = true } }
                 }
+            )
+        }
+
+        composable("calendar") {
+            // Recuperiamo l'ID facoltà dall'utente corrente (se disponibile nel AuthViewModel o ProfileViewModel)
+            // Esempio supponendo tu abbia accesso al profileViewModel qui:
+            val currentUser by authViewModel.currentUserData.collectAsState()
+            val facultyId = currentUser?.faculty_id
+
+            CalendarScreen(
+                onBackClick = { navController.popBackStack() },
+                userFacultyId = facultyId
             )
         }
     }

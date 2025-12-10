@@ -167,3 +167,24 @@ sealed class UploadNoteState {
     object Success : UploadNoteState()
     data class Error(val message: String) : UploadNoteState()
 }
+
+
+
+data class Lesson(
+    val id: Int,
+    @SerializedName("day_of_week") val dayOfWeek: String,
+    @SerializedName("start_time") val startTime: String,
+    @SerializedName("end_time") val endTime: String,
+    val course: CourseLocationInfo
+)
+
+data class CourseLocationInfo(
+    val id: Int,
+    val name: String,
+    @SerializedName("teacher_name") val teacherName: String?,
+    @SerializedName("room_number") val roomNumber: String?,
+    @SerializedName("building_name") val buildingName: String?,
+    val floor: Int?,
+    val latitude: Double?,
+    val longitude: Double?
+)

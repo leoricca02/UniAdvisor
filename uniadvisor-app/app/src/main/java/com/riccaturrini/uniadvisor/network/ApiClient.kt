@@ -146,6 +146,10 @@ interface ApiService {
         @Query("user_latitude") userLatitude: Double,
         @Query("user_longitude") userLongitude: Double
     ): Response<NavigationInfo>
+
+    // Lessons / Schedule endpoints
+    @GET("lessons/course/{course_id}")
+    suspend fun getLessonsByCourse(@Path("course_id") courseId: Int): retrofit2.Response<List<Lesson>>
 }
 
 /**

@@ -18,10 +18,11 @@ import com.riccaturrini.uniadvisor.viewmodel.ProfileViewModel
 @Composable
 fun DashboardScreen(
     authViewModel: AuthViewModel = viewModel(),
+    onNavigate: (String) -> Unit, // Callback per navigazione "esterna" (es. Calendar nel MainNavHost)
     onLogout: () -> Unit = {}
 ) {
     val profileViewModel: ProfileViewModel = viewModel()
-    val navController = rememberNavController()
+    val navController = rememberNavController() // NavController interno per la BottomBar
     val courseViewModel: CourseViewModel = viewModel()
 
     // Ensure user data is loaded
@@ -52,6 +53,7 @@ fun DashboardScreen(
             navController = navController,
             authViewModel = authViewModel,
             courseViewModel = courseViewModel,
+            onParentNavigate = onNavigate, // <--- Passiamo il navigatore "padre" al grafo
             onLogout = onLogout,
             modifier = Modifier.padding(innerPadding)
         )
@@ -65,6 +67,7 @@ fun DashboardNavGraph(
     navController: NavHostController,
     authViewModel: AuthViewModel,
     courseViewModel: CourseViewModel,
+    onParentNavigate: (String) -> Unit, // <--- Nuovo parametro
     onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -78,12 +81,19 @@ fun DashboardNavGraph(
                 profileViewModel = profileViewModel,
                 authViewModel = authViewModel,
                 onNavigate = { route ->
-                    navController.navigate(route) {
-                        popUpTo("home") {
-                            saveState = true
+                    // LOGICA DI SMISTAMENTO:
+                    if (route == "calendar") {
+                        // Se la rotta è "calendar", usiamo il navigatore padre (MainActivity)
+                        onParentNavigate(route)
+                    } else {
+                        // Altrimenti (faculty, notes, reviews...) navighiamo internamente alla Dashboard
+                        navController.navigate(route) {
+                            popUpTo("home") {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                        launchSingleTop = true
-                        restoreState = true
                     }
                 },
                 onLogout = onLogout
