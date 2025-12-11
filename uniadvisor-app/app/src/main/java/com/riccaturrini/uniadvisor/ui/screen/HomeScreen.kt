@@ -1,8 +1,14 @@
 package com.riccaturrini.uniadvisor.ui.screen
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.Location
 import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,17 +28,29 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.android.gms.location.LocationServices
 import com.riccaturrini.uniadvisor.data.Lesson
+import com.riccaturrini.uniadvisor.network.ApiClient
+import com.riccaturrini.uniadvisor.network.CheckInRequest
 import com.riccaturrini.uniadvisor.viewmodel.AuthViewModel
 import com.riccaturrini.uniadvisor.viewmodel.ProfileUiState
 import com.riccaturrini.uniadvisor.viewmodel.ProfileViewModel
 import com.riccaturrini.uniadvisor.viewmodel.ScheduleUiState
 import com.riccaturrini.uniadvisor.viewmodel.ScheduleViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.TextStyle
@@ -47,19 +65,18 @@ fun HomeScreen(
     onNavigate: (String) -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
-    // Collect states from ViewModels
     val currentUser by authViewModel.currentUserData.collectAsState()
     val profileState by profileViewModel.profileState.collectAsState()
     val scheduleState by scheduleViewModel.uiState.collectAsState()
 
     var showLogoutDialog by remember { mutableStateOf(false) }
 
-    // 1. Load User Profile on startup
+    // Load User Profile on startup
     LaunchedEffect(Unit) {
         profileViewModel.loadProfile()
     }
 
-    // 2. Load Schedule once profile is loaded and faculty_id is available
+    // Load Schedule once profile is loaded
     LaunchedEffect(profileState) {
         if (profileState is ProfileUiState.Success) {
             val user = (profileState as ProfileUiState.Success).user
@@ -69,7 +86,6 @@ fun HomeScreen(
         }
     }
 
-    // Logout Confirmation Dialog
     if (showLogoutDialog) {
         LogoutDialog(
             onDismiss = { showLogoutDialog = false },
@@ -134,13 +150,13 @@ fun HomeScreen(
                             .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(20.dp)
                     ) {
-                        // --- 1. WELCOME CARD ---
+                        // 1. Welcome Card
                         WelcomeCard(
                             firstName = user.first_name,
                             greeting = getGreeting()
                         )
 
-                        // --- 2. TODAY'S LESSONS ---
+                        // 2. TODAY'S LESSONS (Auto Check-in)
                         if (scheduleState is ScheduleUiState.Success) {
                             val allLessons = (scheduleState as ScheduleUiState.Success).allLessons
                             TodayScheduleSection(allLessons = allLessons)
@@ -150,27 +166,25 @@ fun HomeScreen(
 
                         Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                        // --- 3. MAIN MENU ---
+                        // 3. Main Menu
                         Text(
                             text = "Quick Menu",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
 
-                        // Large Calendar Card
                         CalendarCard(onClick = { onNavigate("calendar") })
 
-                        // Grid for other actions (Notes, Reviews, etc.)
                         QuickActionsGrid(onNavigate = onNavigate)
 
-                        // --- 4. STATISTICS ---
+                        // 4. Statistics
                         StatisticsCard(
                             notesCount = stats.notesCount,
                             reviewsCount = stats.reviewsCount,
                             ratingsCount = stats.noteRatingsCount
                         )
 
-                        // --- 5. FACULTY INFO ---
+                        // 5. Faculty Info
                         successState.faculty?.let { faculty ->
                             FacultyInfoCard(facultyName = faculty.name)
                         }
@@ -183,17 +197,12 @@ fun HomeScreen(
     }
 }
 
-// ==========================================
-// UI COMPONENTS (Helpers)
-// ==========================================
-
 @Composable
 fun TodayScheduleSection(allLessons: List<Lesson>) {
-    // Get current day in English (Monday, Tuesday...)
     val todayDayOfWeek = LocalDate.now().dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH)
-    val displayDayOfWeek = LocalDate.now().dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ITALIAN)
+    val displayDayOfWeek = LocalDate.now().dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH) // English
 
-    // Filter today's lessons and sort by time
+    // Filter today's lessons
     val todayLessons = allLessons
         .filter { it.dayOfWeek.equals(todayDayOfWeek, ignoreCase = true) }
         .sortedBy { it.startTime }
@@ -267,7 +276,7 @@ fun TodayScheduleSection(allLessons: List<Lesson>) {
                 }
             }
         } else {
-            // Horizontal list of lesson cards
+            // Horizontal List
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp)
@@ -283,23 +292,100 @@ fun TodayScheduleSection(allLessons: List<Lesson>) {
 @Composable
 fun TodayLessonCard(lesson: Lesson) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
-    // Determine lesson status
+    // Lifecycle Owner for detecting app resume
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Time Logic
     val now = LocalTime.now()
     val start = try { LocalTime.parse(lesson.startTime) } catch (e: Exception) { LocalTime.MIN }
     val end = try { LocalTime.parse(lesson.endTime) } catch (e: Exception) { LocalTime.MAX }
 
     val isActive = now.isAfter(start) && now.isBefore(end)
 
-    // Dynamic styling
+    // -- STATES --
+    var currentOccupancy by remember { mutableIntStateOf(lesson.checkins) }
+    var isCheckingIn by remember { mutableStateOf(false) }
+    var isCheckedIn by remember { mutableStateOf(false) }
+    var checkInFailed by remember { mutableStateOf(false) }
+    var locationPermissionDenied by remember { mutableStateOf(false) }
+
+    // Trigger to re-run check logic (incremented on resume)
+    var checkTrigger by remember { mutableIntStateOf(0) }
+
+    // -- LIFECYCLE OBSERVER --
+    // This makes the app re-check when you open it back up
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                // If we are active but failed or haven't checked in, retry
+                if (isActive && !isCheckedIn) {
+                    checkTrigger++
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    // Helper to check permission
+    fun hasLocationPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    // Permission Launcher
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            locationPermissionDenied = false
+            // Retry immediately
+            checkTrigger++
+        } else {
+            locationPermissionDenied = true
+        }
+    }
+
+    // -- AUTOMATIC CHECK-IN LOGIC --
+    // Runs when:
+    // 1. 'isActive' becomes true (Lesson starts)
+    // 2. 'checkTrigger' increases (App Resumed or User clicked Retry)
+    LaunchedEffect(isActive, checkTrigger) {
+        if (isActive && !isCheckedIn && !isCheckingIn) {
+            if (hasLocationPermission()) {
+                isCheckingIn = true
+                checkInFailed = false // Reset error state
+
+                performCheckIn(context, lesson.id, scope) { success ->
+                    isCheckingIn = false
+                    if (success) {
+                        isCheckedIn = true
+                        currentOccupancy += 1
+                    } else {
+                        checkInFailed = true // Too far?
+                    }
+                }
+            } else {
+                locationPermissionDenied = true
+            }
+        }
+    }
+
+    // Styling
     val containerColor = if (isActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
     val contentColor = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
     val borderColor = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
 
     Card(
         modifier = Modifier
-            .width(260.dp)
-            .height(145.dp), // Increased height slightly
+            .width(280.dp)
+            .height(160.dp),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         border = BorderStroke(1.dp, borderColor),
         elevation = CardDefaults.cardElevation(defaultElevation = if (isActive) 4.dp else 1.dp)
@@ -310,7 +396,7 @@ fun TodayLessonCard(lesson: Lesson) {
                 .fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Header: Time and Badge
+            // Header: Time & Badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -324,88 +410,149 @@ fun TodayLessonCard(lesson: Lesson) {
                 )
 
                 if (isActive) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.primary,
-                        shape = RoundedCornerShape(4.dp)
-                    ) {
-                        Text(
-                            text = "NOW",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            fontWeight = FontWeight.Bold
-                        )
+                    Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                        Text("LIVE", color = Color.White)
                     }
                 }
             }
 
-            // Body: Course Name
+            // Course Name
             Text(
                 text = lesson.course.name,
                 style = MaterialTheme.typography.titleMedium,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 fontWeight = FontWeight.Bold,
                 color = contentColor
             )
 
-            // Footer: Room & Navigation Link
+            // Occupancy Counter (Real Data)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha=0.5f), RoundedCornerShape(4.dp))
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Icon(
+                    Icons.Default.Groups,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "$currentOccupancy present",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Footer: Status & Navigate
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Room Info (Takes available space)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f) // Important: Prevents pushing the button off screen
+                // STATUS AREA
+                Box(
+                    modifier = Modifier.height(36.dp),
+                    contentAlignment = Alignment.CenterStart
                 ) {
-                    Icon(
-                        Icons.Default.LocationOn,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = MaterialTheme.colorScheme.secondary
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    val room = lesson.course.roomNumber ?: "Room N/A"
-                    val building = lesson.course.buildingName
-
-                    Text(
-                        text = if (building != null) "$room • $building" else room,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    if (isCheckedIn) {
+                        // Success State
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Present", color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                    } else if (isCheckingIn) {
+                        // Loading State
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Checking...", style = MaterialTheme.typography.bodySmall)
+                        }
+                    } else if (checkInFailed && isActive) {
+                        // Failed State (Click to Retry!)
+                        Row(
+                            modifier = Modifier.clickable { checkTrigger++ }, // Manual retry
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Retry", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Not in class (Retry)", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, fontStyle = FontStyle.Italic)
+                        }
+                    } else if (locationPermissionDenied && isActive) {
+                        // Permission missing
+                        Button(
+                            onClick = { locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                            modifier = Modifier.height(28.dp)
+                        ) {
+                            Text("Enable GPS", fontSize = 11.sp)
+                        }
+                    } else {
+                        // Inactive
+                        Text(if (now.isBefore(start)) "Soon" else "Finished", color = Color.Gray, fontSize = 12.sp)
+                    }
                 }
 
-                // NAVIGATION CLICKABLE TEXT (Replaces Button)
+                // NAVIGATE BUTTON
                 if (lesson.course.latitude != null && lesson.course.longitude != null) {
-                    Row(
-                        modifier = Modifier
-                            .clickable {
-                                openMap(context, lesson.course.latitude, lesson.course.longitude, lesson.course.name)
-                            }
-                            .padding(start = 8.dp, top = 4.dp, bottom = 4.dp), // Padding for touch area
-                        verticalAlignment = Alignment.CenterVertically
+                    FilledTonalIconButton(
+                        onClick = {
+                            openMap(context, lesson.course.latitude, lesson.course.longitude, lesson.course.name)
+                        },
+                        modifier = Modifier.size(36.dp)
                     ) {
-                        Text(
-                            text = "Navigate",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
                         Icon(
-                            imageVector = Icons.Default.ArrowForward,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(14.dp)
+                            imageVector = Icons.Default.Directions,
+                            contentDescription = "Navigate",
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
             }
         }
+    }
+}
+
+// Logic to get location and call API (Silent check-in)
+fun performCheckIn(context: Context, lessonId: Int, scope: CoroutineScope, onResult: (Boolean) -> Unit) {
+    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+
+    try {
+        fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+            if (location != null) {
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        val request = CheckInRequest(location.latitude, location.longitude)
+                        val response = ApiClient.instance.checkInLesson(lessonId, request)
+
+                        withContext(Dispatchers.Main) {
+                            if (response.isSuccessful) {
+                                onResult(true)
+                            } else {
+                                onResult(false)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            onResult(false)
+                        }
+                    }
+                }
+            } else {
+                onResult(false)
+            }
+        }.addOnFailureListener {
+            onResult(false)
+        }
+    } catch (e: SecurityException) {
+        onResult(false)
     }
 }
 

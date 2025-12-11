@@ -175,7 +175,8 @@ data class Lesson(
     @SerializedName("day_of_week") val dayOfWeek: String,
     @SerializedName("start_time") val startTime: String,
     @SerializedName("end_time") val endTime: String,
-    val course: CourseLocationInfo
+    val course: CourseLocationInfo,
+    val checkins: Int = 0
 )
 
 data class CourseLocationInfo(

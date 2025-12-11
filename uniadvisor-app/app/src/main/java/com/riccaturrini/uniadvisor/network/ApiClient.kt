@@ -8,6 +8,7 @@ import retrofit2.http.*
 import java.util.concurrent.TimeUnit
 import retrofit2.Response
 
+data class CheckInRequest(val latitude: Double, val longitude: Double)
 
 interface ApiService {
     // User endpoints
@@ -150,6 +151,12 @@ interface ApiService {
     // Lessons / Schedule endpoints
     @GET("lessons/course/{course_id}")
     suspend fun getLessonsByCourse(@Path("course_id") courseId: Int): retrofit2.Response<List<Lesson>>
+
+    @POST("lessons/{lesson_id}/check-in")
+    suspend fun checkInLesson(
+        @Path("lesson_id") lessonId: Int,
+        @Body location: CheckInRequest
+    ): Response<Map<String, Any>>
 }
 
 /**
