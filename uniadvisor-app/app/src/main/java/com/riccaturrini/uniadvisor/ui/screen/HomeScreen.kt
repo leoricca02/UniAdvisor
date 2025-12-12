@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -39,9 +40,11 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.riccaturrini.uniadvisor.data.Lesson
 import com.riccaturrini.uniadvisor.network.ApiClient
 import com.riccaturrini.uniadvisor.network.CheckInRequest
+import com.riccaturrini.uniadvisor.ui.components.CompassDialog
 import com.riccaturrini.uniadvisor.viewmodel.AuthViewModel
 import com.riccaturrini.uniadvisor.viewmodel.ProfileUiState
 import com.riccaturrini.uniadvisor.viewmodel.ProfileViewModel
@@ -50,11 +53,22 @@ import com.riccaturrini.uniadvisor.viewmodel.ScheduleViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.TextStyle
 import java.util.Locale
+
+// Data class to hold navigation target info for the Compass
+data class NavigationTarget(
+    val lat: Double,
+    val lng: Double,
+    val name: String,
+    val room: String?,
+    val floor: Int?,
+    val building: String?
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,27 +79,55 @@ fun HomeScreen(
     onNavigate: (String) -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // ViewModel States
     val currentUser by authViewModel.currentUserData.collectAsState()
     val profileState by profileViewModel.profileState.collectAsState()
     val scheduleState by scheduleViewModel.uiState.collectAsState()
 
+    // UI States
     var showLogoutDialog by remember { mutableStateOf(false) }
 
-    // Load User Profile on startup
+    // --- COMPASS NAVIGATION STATES ---
+    var showCompassDialog by rememberSaveable { mutableStateOf(false) }
+    var navigationTarget by remember { mutableStateOf<NavigationTarget?>(null) }
+    var currentLocation by remember { mutableStateOf<Location?>(null) }
+    var isGettingLocationForNav by remember { mutableStateOf(false) }
+
+    // 1. Load User Profile on startup
     LaunchedEffect(Unit) {
-        profileViewModel.loadProfile()
+        if (profileState !is ProfileUiState.Success) {
+            profileViewModel.loadProfile()
+        }
     }
 
-    // Load Schedule once profile is loaded
+    // 2. Load Schedule once profile is loaded
     LaunchedEffect(profileState) {
         if (profileState is ProfileUiState.Success) {
             val user = (profileState as ProfileUiState.Success).user
-            if (user.faculty_id != null) {
+            if (user.faculty_id != null && scheduleState !is ScheduleUiState.Success) {
                 scheduleViewModel.loadSchedule(user.faculty_id)
             }
         }
     }
 
+    // --- COMPASS DIALOG ---
+    if (showCompassDialog && navigationTarget != null && currentLocation != null) {
+        CompassDialog(
+            initialLocation = currentLocation!!,
+            targetLat = navigationTarget!!.lat,
+            targetLng = navigationTarget!!.lng,
+            targetName = navigationTarget!!.name,
+            targetRoom = navigationTarget!!.room,
+            targetFloor = navigationTarget!!.floor,
+            targetBuilding = navigationTarget!!.building,
+            onDismiss = { showCompassDialog = false }
+        )
+    }
+
+    // --- LOGOUT DIALOG ---
     if (showLogoutDialog) {
         LogoutDialog(
             onDismiss = { showLogoutDialog = false },
@@ -121,6 +163,11 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            // Loading indicator for Navigation Location
+            if (isGettingLocationForNav) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter))
+            }
+
             when (profileState) {
                 is ProfileUiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -156,17 +203,38 @@ fun HomeScreen(
                             greeting = getGreeting()
                         )
 
-                        // 2. TODAY'S LESSONS (Auto Check-in)
+                        // 2. TODAY'S LESSONS
                         if (scheduleState is ScheduleUiState.Success) {
                             val allLessons = (scheduleState as ScheduleUiState.Success).allLessons
-                            TodayScheduleSection(allLessons = allLessons)
+
+                            TodayScheduleSection(
+                                allLessons = allLessons,
+                                onNavigateClick = { lat, lng, name, room, floor, building ->
+                                    // Handle Compass Navigation Click
+                                    scope.launch {
+                                        isGettingLocationForNav = true
+                                        val location = getCurrentLocation(context)
+                                        isGettingLocationForNav = false
+
+                                        if (location != null) {
+                                            currentLocation = location
+                                            navigationTarget = NavigationTarget(lat, lng, name, room, floor, building)
+                                            showCompassDialog = true
+                                        } else {
+                                            Toast.makeText(context, "Cannot get location for Compass", Toast.LENGTH_SHORT).show()
+                                            // Fallback to Maps
+                                            openMap(context, lat, lng, name)
+                                        }
+                                    }
+                                }
+                            )
                         } else if (scheduleState is ScheduleUiState.Loading) {
                             LinearProgressIndicator(modifier = Modifier.fillMaxWidth().height(2.dp))
                         }
 
                         Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                        // 3. Main Menu
+                        // 3. Quick Menu
                         Text(
                             text = "Quick Menu",
                             style = MaterialTheme.typography.titleLarge,
@@ -197,10 +265,16 @@ fun HomeScreen(
     }
 }
 
+// ==========================================
+// NEW COMPONENTS
+// ==========================================
+
 @Composable
-fun TodayScheduleSection(allLessons: List<Lesson>) {
+fun TodayScheduleSection(
+    allLessons: List<Lesson>,
+    onNavigateClick: (Double, Double, String, String?, Int?, String?) -> Unit
+) {
     val todayDayOfWeek = LocalDate.now().dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH)
-    val displayDayOfWeek = LocalDate.now().dayOfWeek.getDisplayName(TextStyle.FULL, Locale.ENGLISH) // English
 
     // Filter today's lessons
     val todayLessons = allLessons
@@ -217,7 +291,7 @@ fun TodayScheduleSection(allLessons: List<Lesson>) {
                 Icon(Icons.Default.Today, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Today ($displayDayOfWeek)",
+                    text = "Today ($todayDayOfWeek)",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -282,7 +356,7 @@ fun TodayScheduleSection(allLessons: List<Lesson>) {
                 contentPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp)
             ) {
                 items(todayLessons) { lesson ->
-                    TodayLessonCard(lesson)
+                    TodayLessonCard(lesson = lesson, onNavigateClick = onNavigateClick)
                 }
             }
         }
@@ -290,11 +364,12 @@ fun TodayScheduleSection(allLessons: List<Lesson>) {
 }
 
 @Composable
-fun TodayLessonCard(lesson: Lesson) {
+fun TodayLessonCard(
+    lesson: Lesson,
+    onNavigateClick: (Double, Double, String, String?, Int?, String?) -> Unit
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
-    // Lifecycle Owner for detecting app resume
     val lifecycleOwner = LocalLifecycleOwner.current
 
     // Time Logic
@@ -304,22 +379,23 @@ fun TodayLessonCard(lesson: Lesson) {
 
     val isActive = now.isAfter(start) && now.isBefore(end)
 
-    // -- STATES --
-    var currentOccupancy by remember { mutableIntStateOf(lesson.checkins) }
-    var isCheckingIn by remember { mutableStateOf(false) }
-    var isCheckedIn by remember { mutableStateOf(false) }
-    var checkInFailed by remember { mutableStateOf(false) }
-    var locationPermissionDenied by remember { mutableStateOf(false) }
+    // -- STATES (Persistence) --
+    // We check SharedPreferences immediately to initialize 'isCheckedIn'
+    var isCheckedIn by rememberSaveable { mutableStateOf(isLocalCheckedIn(context, lesson.id)) }
 
-    // Trigger to re-run check logic (incremented on resume)
-    var checkTrigger by remember { mutableIntStateOf(0) }
+    var currentOccupancy by rememberSaveable { mutableIntStateOf(lesson.checkins) }
+    var isCheckingIn by rememberSaveable { mutableStateOf(false) }
+    var checkInFailed by rememberSaveable { mutableStateOf(false) }
+    var locationPermissionDenied by rememberSaveable { mutableStateOf(false) }
+
+    // Trigger to re-run check logic
+    var checkTrigger by rememberSaveable { mutableIntStateOf(0) }
 
     // -- LIFECYCLE OBSERVER --
-    // This makes the app re-check when you open it back up
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                // If we are active but failed or haven't checked in, retry
+                // If active and NOT checked in (locally or remotely), retry
                 if (isActive && !isCheckedIn) {
                     checkTrigger++
                 }
@@ -331,44 +407,54 @@ fun TodayLessonCard(lesson: Lesson) {
         }
     }
 
-    // Helper to check permission
-    fun hasLocationPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-    }
-
     // Permission Launcher
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
             locationPermissionDenied = false
-            // Retry immediately
             checkTrigger++
         } else {
             locationPermissionDenied = true
         }
     }
 
+    // Navigation Permission Launcher
+    val navPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted && lesson.course.latitude != null && lesson.course.longitude != null) {
+            onNavigateClick(
+                lesson.course.latitude,
+                lesson.course.longitude,
+                lesson.course.name,
+                lesson.course.roomNumber,
+                lesson.course.floor,
+                lesson.course.buildingName
+            )
+        }
+    }
+
     // -- AUTOMATIC CHECK-IN LOGIC --
-    // Runs when:
-    // 1. 'isActive' becomes true (Lesson starts)
-    // 2. 'checkTrigger' increases (App Resumed or User clicked Retry)
     LaunchedEffect(isActive, checkTrigger) {
-        if (isActive && !isCheckedIn && !isCheckingIn) {
-            if (hasLocationPermission()) {
+        // Double check: if already checked in locally, skip everything
+        if (isLocalCheckedIn(context, lesson.id)) {
+            isCheckedIn = true
+        } else if (isActive && !isCheckingIn && !checkInFailed) {
+            // Proceed with API check-in
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
                 isCheckingIn = true
-                checkInFailed = false // Reset error state
+                checkInFailed = false
 
                 performCheckIn(context, lesson.id, scope) { success ->
                     isCheckingIn = false
                     if (success) {
+                        // Mark as checked in UI and Persistence
                         isCheckedIn = true
                         currentOccupancy += 1
+                        saveLocalCheckIn(context, lesson.id) // <--- PERSISTENCE
                     } else {
-                        checkInFailed = true // Too far?
+                        checkInFailed = true
                     }
                 }
             } else {
@@ -396,7 +482,7 @@ fun TodayLessonCard(lesson: Lesson) {
                 .fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Header: Time & Badge
+            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -420,13 +506,13 @@ fun TodayLessonCard(lesson: Lesson) {
             Text(
                 text = lesson.course.name,
                 style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
                 fontWeight = FontWeight.Bold,
                 color = contentColor
             )
 
-            // Occupancy Counter (Real Data)
+            // Occupancy Counter
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -462,23 +548,23 @@ fun TodayLessonCard(lesson: Lesson) {
                     contentAlignment = Alignment.CenterStart
                 ) {
                     if (isCheckedIn) {
-                        // Success State
+                        // Success
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Present", color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     } else if (isCheckingIn) {
-                        // Loading State
+                        // Loading
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp)
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("Checking...", style = MaterialTheme.typography.bodySmall)
                         }
                     } else if (checkInFailed && isActive) {
-                        // Failed State (Click to Retry!)
+                        // Failed
                         Row(
-                            modifier = Modifier.clickable { checkTrigger++ }, // Manual retry
+                            modifier = Modifier.clickable { checkTrigger++ },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(Icons.Default.Refresh, contentDescription = "Retry", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
@@ -486,7 +572,7 @@ fun TodayLessonCard(lesson: Lesson) {
                             Text("Not in class (Retry)", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, fontStyle = FontStyle.Italic)
                         }
                     } else if (locationPermissionDenied && isActive) {
-                        // Permission missing
+                        // Permission Missing
                         Button(
                             onClick = { locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
@@ -504,7 +590,18 @@ fun TodayLessonCard(lesson: Lesson) {
                 if (lesson.course.latitude != null && lesson.course.longitude != null) {
                     FilledTonalIconButton(
                         onClick = {
-                            openMap(context, lesson.course.latitude, lesson.course.longitude, lesson.course.name)
+                            if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                                onNavigateClick(
+                                    lesson.course.latitude,
+                                    lesson.course.longitude,
+                                    lesson.course.name,
+                                    lesson.course.roomNumber,
+                                    lesson.course.floor,
+                                    lesson.course.buildingName
+                                )
+                            } else {
+                                navPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                            }
                         },
                         modifier = Modifier.size(36.dp)
                     ) {
@@ -520,10 +617,40 @@ fun TodayLessonCard(lesson: Lesson) {
     }
 }
 
-// Logic to get location and call API (Silent check-in)
+// ==========================================
+// HELPERS (Persistence & Location)
+// ==========================================
+
+// Saves that this specific lesson has been checked in for today
+fun saveLocalCheckIn(context: Context, lessonId: Int) {
+    val prefs = context.getSharedPreferences("uniadvisor_prefs", Context.MODE_PRIVATE)
+    val today = LocalDate.now().toString()
+    // Key format: checkin_LESSONID_DATE
+    val key = "checkin_${lessonId}_$today"
+    prefs.edit().putBoolean(key, true).apply()
+}
+
+// Checks if we already have a local record for today
+fun isLocalCheckedIn(context: Context, lessonId: Int): Boolean {
+    val prefs = context.getSharedPreferences("uniadvisor_prefs", Context.MODE_PRIVATE)
+    val today = LocalDate.now().toString()
+    val key = "checkin_${lessonId}_$today"
+    return prefs.getBoolean(key, false)
+}
+
+// Helper to get location for Compass initialization
+suspend fun getCurrentLocation(context: Context): Location? = withContext(Dispatchers.IO) {
+    try {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return@withContext null
+        LocationServices.getFusedLocationProviderClient(context)
+            .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+            .await()
+    } catch (e: Exception) { null }
+}
+
+// Silent Check-in
 fun performCheckIn(context: Context, lessonId: Int, scope: CoroutineScope, onResult: (Boolean) -> Unit) {
     val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
-
     try {
         fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
             if (location != null) {
@@ -556,17 +683,15 @@ fun performCheckIn(context: Context, lessonId: Int, scope: CoroutineScope, onRes
     }
 }
 
-// Helper function to open Google Maps
+// Helper to open Google Maps directly (Fallback)
 fun openMap(context: Context, lat: Double, lng: Double, label: String) {
     val uri = Uri.parse("geo:$lat,$lng?q=$lat,$lng($label)")
-    val intent = Intent(Intent.ACTION_VIEW, uri)
-    intent.setPackage("com.google.android.apps.maps")
-
+    val intent = Intent(Intent.ACTION_VIEW, uri).setPackage("com.google.android.apps.maps")
     if (intent.resolveActivity(context.packageManager) != null) {
         context.startActivity(intent)
     } else {
-        val genericIntent = Intent(Intent.ACTION_VIEW, uri)
-        context.startActivity(genericIntent)
+        val browserIntent = Intent(Intent.ACTION_VIEW, uri)
+        context.startActivity(browserIntent)
     }
 }
 
