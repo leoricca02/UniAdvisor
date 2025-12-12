@@ -1,17 +1,22 @@
 package com.riccaturrini.uniadvisor
 
+import android.app.Activity
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast // Added for debug message
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.riccaturrini.uniadvisor.ui.screen.*
 import com.riccaturrini.uniadvisor.ui.theme.UniAdvisorTheme
+import com.riccaturrini.uniadvisor.utils.PostureDetector
 import com.riccaturrini.uniadvisor.viewmodel.AuthUiState
 import com.riccaturrini.uniadvisor.viewmodel.AuthViewModel
 
@@ -19,6 +24,33 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+            // --- SMART ROTATION LOCK (BED MODE) ---
+            val context = LocalContext.current
+            val activity = context as? Activity
+
+            // Initialize the sensor detector
+            val postureDetector = remember { PostureDetector(context) }
+
+            // Collect the "isLyingFlat" state (true = bed mode/flat, false = upright)
+            val isLyingFlat by postureDetector.isLyingFlat.collectAsState(initial = false)
+
+            // React to state changes
+            LaunchedEffect(isLyingFlat) {
+                if (isLyingFlat) {
+                    // Lock to Portrait
+                    activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+
+                    // DEBUG: Show a Toast when bed mode activates
+                    Toast.makeText(context, "Bed Mode Active: Rotation Locked 🛏️", Toast.LENGTH_SHORT).show()
+                    Log.d("SENSOR", "Bed Mode Detected: Locking to Portrait")
+                } else {
+                    // Unlock rotation
+                    activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                    Log.d("SENSOR", "Upright Mode: Unlocking Rotation")
+                }
+            }
+            // --------------------------------------
+
             UniAdvisorTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     UniAdvisorApp()
@@ -112,10 +144,8 @@ fun UniAdvisorApp() {
         }
 
         composable("dashboard") {
-
             DashboardScreen(
                 authViewModel = authViewModel,
-                // AGGIUNGI QUESTA RIGA: Passiamo la navigazione del main controller alla dashboard
                 onNavigate = { route -> navController.navigate(route) },
                 onLogout = {
                     authViewModel.signOut()
@@ -125,8 +155,6 @@ fun UniAdvisorApp() {
         }
 
         composable("calendar") {
-            // Recuperiamo l'ID facoltà dall'utente corrente (se disponibile nel AuthViewModel o ProfileViewModel)
-            // Esempio supponendo tu abbia accesso al profileViewModel qui:
             val currentUser by authViewModel.currentUserData.collectAsState()
             val facultyId = currentUser?.faculty_id
 
