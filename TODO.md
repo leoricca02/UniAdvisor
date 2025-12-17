@@ -1,20 +1,5 @@
 TODO
 
-Deadline: Registration must be completed no later than 3 days before the scheduled exam date.
-
-CHECK THESE Requirements:
-
-1.Use at least one public Cloud service (e.g., from https://publicapis.io/)
-2.Support multiple users with login and authentication
-3.Include some 2D graphics
-4. Use at least one sensor
-5. Use GPS
-6. Use the camera or perform image processing
-7. Include concurrency (async tasks, coroutines, etc.)
-8. Use at least one additional cloud feature (e.g., Google Cloud service)
-9. Implement a REST API running on a remote server (e.g., PythonAnywhere, Docker on a VM)
-10. Implement a storage service (e.g., a simple SQL database accessed via the REST API)
-
 ###### -Filtri (ordine) DONE
 
 
@@ -85,7 +70,7 @@ CHECK THESE Requirements:
 
 ###### -Position
 
-1. ###### Navigate to Class 🧭
+1. ###### Navigate to Class 🧭 DONE(a modo mio)
 
 ######         "Navigate to this faculty" button on FacultyMainScreen
 
@@ -109,7 +94,7 @@ CHECK THESE Requirements:
 
 ###### 
 
-###### -Aggiungere l'obbligo di vedere il nome di chi ha caricato la nota
+###### -Aggiungere l'obbligo di vedere il nome di chi ha caricato la nota	
 
 ###### 
 
@@ -121,7 +106,7 @@ CHECK THESE Requirements:
 
 ###### 
 
-###### -Aggiungere una matita per editare, ed eventualmente cancellare, le proprie note reviews
+###### -Aggiungere una matita per editare, ed eventualmente cancellare, le proprie note reviews		DONE
 
 ###### 
 
@@ -158,7 +143,7 @@ CHECK THESE Requirements:
 <<<<<<< HEAD
 
 
--Magnetometer \& Accelerometer/Gyroscope (Provide an accurate on-campus navigation tool. Users can hold their phone flat, and a compass overlay points them to their next class or a specific building. The PDF mentions using the gyroscope and accelerometer for orientation)
+-Magnetometer \& Accelerometer/Gyroscope (Provide an accurate on-campus navigation tool. Users can hold their phone flat, and a compass overlay points them to their next class or a specific building. The PDF mentions using the gyroscope and accelerometer for orientation) DONE
 
 
 
@@ -166,7 +151,7 @@ CHECK THESE Requirements:
 
 
 
--new feature --> how many people there are in a room
+-new feature --> how many people there are in a room DONE
 =======
 -vedere se è possibile introdurre il nome di chi ha scritto la note quando si visualizzano le note di un corso
 >>>>>>> origin/main
