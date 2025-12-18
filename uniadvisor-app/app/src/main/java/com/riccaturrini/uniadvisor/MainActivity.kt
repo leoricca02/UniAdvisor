@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
                     activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
 
                     // DEBUG: Show a Toast when bed mode activates
-                    Toast.makeText(context, "Bed Mode Active: Rotation Locked 🛏️", Toast.LENGTH_SHORT).show()
+                    //Toast.makeText(context, "Bed Mode Active: Rotation Locked 🛏️", Toast.LENGTH_SHORT).show()
                     Log.d("SENSOR", "Bed Mode Detected: Locking to Portrait")
                 } else {
                     // Unlock rotation
