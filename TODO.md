@@ -1,7 +1,5 @@
 TODO
 
-- Every time my phone senses a rotation, a pop-up appears: "Bed Mode Active: Rotation Locked." It's best to avoid this pop-up.
-
 - The button to change the theme from Dark to Light in the notes preview doesn't work.
 
 - The blue top bar is too big
