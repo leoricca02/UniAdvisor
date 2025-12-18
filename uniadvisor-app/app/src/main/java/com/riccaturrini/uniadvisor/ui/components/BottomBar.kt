@@ -35,10 +35,10 @@ fun UniAdvisorBottomBar(
             icon = {
                 Icon(
                     imageVector = Icons.Filled.School,
-                    contentDescription = "Your Faculty"
+                    contentDescription = "Faculty"
                 )
             },
-            label = { Text("Your Faculty") },
+            label = { Text("Faculty") },
             colors = NavigationBarItemDefaults.colors(
                 selectedIconColor = activeColor,
                 selectedTextColor = activeColor,
