@@ -176,7 +176,9 @@ data class Lesson(
     @SerializedName("start_time") val startTime: String,
     @SerializedName("end_time") val endTime: String,
     val course: CourseLocationInfo,
-    val checkins: Int = 0
+    val checkins: Int = 0,
+
+    val last_checkin_date: String? = null
 )
 
 data class CourseLocationInfo(

@@ -53,6 +53,7 @@ import com.riccaturrini.uniadvisor.viewmodel.ScheduleViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
@@ -372,30 +373,49 @@ fun TodayLessonCard(
     val scope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Time Logic
-    val now = LocalTime.now()
+    // --- 1. GESTIONE TEMPO REALE (Auto-aggiornamento) ---
+    // Usiamo uno stato per 'now' che si aggiorna ogni minuto.
+    var now by remember { mutableStateOf(LocalTime.now()) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1000 * 30) // Aggiorna ogni 30 secondi
+            now = LocalTime.now()
+        }
+    }
+
     val start = try { LocalTime.parse(lesson.startTime) } catch (e: Exception) { LocalTime.MIN }
     val end = try { LocalTime.parse(lesson.endTime) } catch (e: Exception) { LocalTime.MAX }
 
     val isActive = now.isAfter(start) && now.isBefore(end)
+    // ----------------------------------------------------
 
-    // -- STATES (Persistence) --
-    // We check SharedPreferences immediately to initialize 'isCheckedIn'
+    // --- 2. LOGICA RESET PRESENTI (Fix "Dati Vecchi") ---
+    val todayDate = LocalDate.now().toString()
+    val serverDate = lesson.last_checkin_date
+
+    val initialOccupancy = if (serverDate == todayDate) {
+        lesson.checkins
+    } else {
+        0
+    }
+    // ----------------------------------------------------
+
+    // -- STATES --
+    var currentOccupancy by rememberSaveable(initialOccupancy) { mutableIntStateOf(initialOccupancy) }
+
     var isCheckedIn by rememberSaveable { mutableStateOf(isLocalCheckedIn(context, lesson.id)) }
 
-    var currentOccupancy by rememberSaveable { mutableIntStateOf(lesson.checkins) }
     var isCheckingIn by rememberSaveable { mutableStateOf(false) }
     var checkInFailed by rememberSaveable { mutableStateOf(false) }
     var locationPermissionDenied by rememberSaveable { mutableStateOf(false) }
 
-    // Trigger to re-run check logic
     var checkTrigger by rememberSaveable { mutableIntStateOf(0) }
 
     // -- LIFECYCLE OBSERVER --
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                // If active and NOT checked in (locally or remotely), retry
                 if (isActive && !isCheckedIn) {
                     checkTrigger++
                 }
@@ -437,33 +457,32 @@ fun TodayLessonCard(
 
     // -- AUTOMATIC CHECK-IN LOGIC --
     LaunchedEffect(isActive, checkTrigger) {
-        // Double check: if already checked in locally, skip everything
-        if (isLocalCheckedIn(context, lesson.id)) {
-            isCheckedIn = true
-        } else if (isActive && !isCheckingIn && !checkInFailed) {
-            // Proceed with API check-in
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                isCheckingIn = true
-                checkInFailed = false
-
-                performCheckIn(context, lesson.id, scope) { success ->
-                    isCheckingIn = false
-                    if (success) {
-                        // Mark as checked in UI and Persistence
-                        isCheckedIn = true
-                        currentOccupancy += 1
-                        saveLocalCheckIn(context, lesson.id) // <--- PERSISTENCE
-                    } else {
-                        checkInFailed = true
-                    }
-                }
+        if (isActive && !isCheckedIn && !isCheckingIn && !checkInFailed) {
+            if (isLocalCheckedIn(context, lesson.id)) {
+                isCheckedIn = true
             } else {
-                locationPermissionDenied = true
+                if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                    isCheckingIn = true
+                    checkInFailed = false // Reset preventivo
+
+                    performCheckIn(context, lesson.id, scope) { success ->
+                        isCheckingIn = false
+                        if (success) {
+                            isCheckedIn = true
+                            currentOccupancy += 1
+                            saveLocalCheckIn(context, lesson.id)
+                        } else {
+                            checkInFailed = true
+                        }
+                    }
+                } else {
+                    locationPermissionDenied = true
+                }
             }
         }
     }
 
-    // Styling
+    // Styling dinamico
     val containerColor = if (isActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
     val contentColor = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
     val borderColor = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
@@ -482,7 +501,7 @@ fun TodayLessonCard(
                 .fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Header
+            // Header: Orario
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -548,11 +567,16 @@ fun TodayLessonCard(
                     contentAlignment = Alignment.CenterStart
                 ) {
                     if (isCheckedIn) {
-                        // Success
+                        // --- MODIFICA 1: Concluded vs Present ---
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Present", color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text(
+                                text = if (isActive) "Present" else "Concluded", // Se finita, cambia testo
+                                color = Color(0xFF4CAF50),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
                         }
                     } else if (isCheckingIn) {
                         // Loading
@@ -562,14 +586,17 @@ fun TodayLessonCard(
                             Text("Checking...", style = MaterialTheme.typography.bodySmall)
                         }
                     } else if (checkInFailed && isActive) {
-                        // Failed
+                        // --- MODIFICA 2: Fix Retry e Testo ---
                         Row(
-                            modifier = Modifier.clickable { checkTrigger++ },
+                            modifier = Modifier.clickable {
+                                checkInFailed = false // RESET STATO
+                                checkTrigger++        // RIPROVA
+                            },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(Icons.Default.Refresh, contentDescription = "Retry", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Not in class (Retry)", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, fontStyle = FontStyle.Italic)
+                            Text("Not present. Retry", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, fontStyle = FontStyle.Italic)
                         }
                     } else if (locationPermissionDenied && isActive) {
                         // Permission Missing
@@ -581,7 +608,7 @@ fun TodayLessonCard(
                             Text("Enable GPS", fontSize = 11.sp)
                         }
                     } else {
-                        // Inactive
+                        // Inactive (Soon o Finished)
                         Text(if (now.isBefore(start)) "Soon" else "Finished", color = Color.Gray, fontSize = 12.sp)
                     }
                 }

@@ -22,8 +22,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -63,7 +61,7 @@ class PdfViewerActivity : ComponentActivity() {
                 ) {
                     PdfViewerScreen(
                         pdfUrl = pdfUrl,
-                        isDarkMode = isDarkEnv, // Pass this to invert PDF colors
+                        isDarkMode = isDarkEnv,
                         onBackPressed = { finish() },
                         onDownload = {
                             try {
@@ -98,18 +96,7 @@ fun PdfViewerScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    // Prepare ColorFilter for Night Mode (Inverts colors: White -> Black)
-    val colorFilter = if (isDarkMode) {
-        // Negative Color Matrix
-        ColorFilter.colorMatrix(ColorMatrix(floatArrayOf(
-            -1f, 0f, 0f, 0f, 255f,
-            0f, -1f, 0f, 0f, 255f,
-            0f, 0f, -1f, 0f, 255f,
-            0f, 0f, 0f, 1f, 0f
-        )))
-    } else {
-        null
-    }
+    // NOTA: Ho rimosso la logica del ColorFilter che invertiva i colori del PDF.
 
     LaunchedEffect(pdfUrl) {
         scope.launch {
@@ -163,7 +150,8 @@ fun PdfViewerScreen(
                         Text("PDF Preview")
                         if (totalPages > 0) {
                             Text(
-                                text = "$totalPages pages • ${if(isDarkMode) "Night Mode" else "Day Mode"}",
+                                // Ho lasciato l'indicatore testuale, utile per debuggare il sensore
+                                text = "$totalPages pages • ${if(isDarkMode) "Dark Mode" else "Light Mode"}",
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -253,9 +241,9 @@ fun PdfViewerScreen(
                                 Image(
                                     bitmap = bitmap.asImageBitmap(),
                                     contentDescription = "Page ${index + 1}",
-                                    modifier = Modifier.fillMaxWidth(),
-                                    // Apply ColorFilter if Dark Mode to invert colors (White paper -> Black paper)
-                                    colorFilter = colorFilter
+                                    modifier = Modifier.fillMaxWidth()
+                                    // RIMOSSO: colorFilter = colorFilter
+                                    // L'immagine rimane originale indipendentemente dal tema
                                 )
                             }
                         }
