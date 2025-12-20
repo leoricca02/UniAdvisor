@@ -87,6 +87,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-tasks:18.1.0")
     implementation("com.google.android.gms:play-services-location:21.1.0")
     implementation("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("androidx.compose.runtime:runtime-livedata")
     implementation(libs.androidx.room.compiler)
 
     // Test dependencies

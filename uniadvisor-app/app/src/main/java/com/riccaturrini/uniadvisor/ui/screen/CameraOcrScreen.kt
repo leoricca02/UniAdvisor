@@ -39,16 +39,16 @@ import com.riccaturrini.uniadvisor.data.*
 import com.riccaturrini.uniadvisor.ui.activity.PdfViewerActivity
 import com.riccaturrini.uniadvisor.viewmodel.CameraOcrViewModel
 import java.io.File
-import java.util.concurrent.Executor
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CameraOcrScreen(
-    courseId: Int,
+    courseId: Int? = null, // Reso opzionale per supportare scansioni generiche
     onNavigateBack: () -> Unit,
-    onSuccess: () -> Unit,
+    onSuccess: () -> Unit = {},
+    onResult: ((Uri) -> Unit)? = null, // NUOVO: Callback per restituire il PDF
     viewModel: CameraOcrViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -61,6 +61,9 @@ fun CameraOcrScreen(
     var showCamera by remember { mutableStateOf(true) }
     var showPreview by remember { mutableStateOf(false) }
     var description by remember { mutableStateOf("") }
+
+    // Flag per capire se stiamo generando il PDF per restituirlo o solo per preview
+    var isGeneratingForReturn by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -76,7 +79,7 @@ fun CameraOcrScreen(
         }
     }
 
-    // Handle Upload Success
+    // Gestione Successo Upload (Caso CourseDetail)
     LaunchedEffect(uploadState) {
         if (uploadState is UploadNoteState.Success) {
             onSuccess()
@@ -84,22 +87,30 @@ fun CameraOcrScreen(
         }
     }
 
-    // Handle PDF Generation Success (Navigate to Preview)
+    // Gestione Creazione PDF (Preview o Ritorno Risultato)
     LaunchedEffect(pdfState) {
         if (pdfState is PdfGenerationState.Success) {
             val pdfUri = (pdfState as PdfGenerationState.Success).pdfUri
-            val intent = Intent(context, PdfViewerActivity::class.java).apply {
-                putExtra("PDF_URL", pdfUri.toString())
+
+            if (isGeneratingForReturn && onResult != null) {
+                // CASO 1: Restituisci il risultato al chiamante (NotesScreen)
+                onResult(pdfUri)
+            } else {
+                // CASO 2: Apri la Preview
+                val intent = Intent(context, PdfViewerActivity::class.java).apply {
+                    putExtra("PDF_URL", pdfUri.toString())
+                }
+                context.startActivity(intent)
+                viewModel.resetPdfState()
             }
-            context.startActivity(intent)
-            viewModel.resetPdfState() // Reset so we don't navigate again on recompose
+            isGeneratingForReturn = false
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (showCamera) "Scan Note" else "Review & Upload") },
+                title = { Text(if (showCamera) "Scan Note" else "Review & Save") },
                 navigationIcon = {
                     IconButton(onClick = {
                         if (showPreview) {
@@ -163,8 +174,22 @@ fun CameraOcrScreen(
                             }
                         },
                         onProcessOcr = { viewModel.processOcrOnImages(context) },
-                        onPreviewPdf = { viewModel.generatePdfForPreview(context) },
-                        onUpload = { viewModel.uploadPdfAsNote(context, courseId, description) },
+                        onPreviewPdf = {
+                            isGeneratingForReturn = false
+                            viewModel.generatePdfForPreview(context)
+                        },
+                        // LOGICA UNIFICATA:
+                        onConfirmAction = {
+                            if (onResult != null) {
+                                // Se c'è un callback di risultato, Genera PDF e ritorna
+                                isGeneratingForReturn = true
+                                viewModel.generatePdfForPreview(context)
+                            } else if (courseId != null) {
+                                // Altrimenti, fai Upload diretto
+                                viewModel.uploadPdfAsNote(context, courseId, description)
+                            }
+                        },
+                        isUploadMode = onResult == null, // Cambia UI in base alla modalità
                         onAddMore = {
                             showPreview = false
                             showCamera = true
@@ -186,8 +211,9 @@ fun OcrPreviewScreen(
     onDescriptionChange: (String) -> Unit,
     onRemoveImage: (Uri) -> Unit,
     onProcessOcr: () -> Unit,
-    onPreviewPdf: () -> Unit, // NEW Callback
-    onUpload: () -> Unit,
+    onPreviewPdf: () -> Unit,
+    onConfirmAction: () -> Unit, // Callback unificata (Upload o Return)
+    isUploadMode: Boolean,
     onAddMore: () -> Unit
 ) {
     Column(
@@ -197,7 +223,7 @@ fun OcrPreviewScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // ... Images Preview Card (Same as before) ...
+        // ... Images Preview Card ...
         Card(
             modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -248,7 +274,7 @@ fun OcrPreviewScreen(
                     is OcrProcessingState.Success -> {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF4CAF50))
-                            Text("Text extracted (${ocrState.text.length} characters)", color = Color(0xFF4CAF50))
+                            Text("Text extracted (${ocrState.text.length} chars)", color = Color(0xFF4CAF50))
                         }
                     }
                     is OcrProcessingState.Error -> {
@@ -258,15 +284,17 @@ fun OcrPreviewScreen(
             }
         }
 
-        // Description Field
-        OutlinedTextField(
-            value = description,
-            onValueChange = onDescriptionChange,
-            label = { Text("Description") },
-            placeholder = { Text("Add a description...") },
-            modifier = Modifier.fillMaxWidth(),
-            maxLines = 3
-        )
+        // Description Field (Solo se in modalità Upload diretto)
+        if (isUploadMode) {
+            OutlinedTextField(
+                value = description,
+                onValueChange = onDescriptionChange,
+                label = { Text("Description") },
+                placeholder = { Text("Add a description...") },
+                modifier = Modifier.fillMaxWidth(),
+                maxLines = 3
+            )
+        }
 
         // Action Buttons
         when (uploadState) {
@@ -278,10 +306,9 @@ fun OcrPreviewScreen(
             }
             is UploadNoteState.Error -> {
                 Text(text = uploadState.message, color = MaterialTheme.colorScheme.error)
-                Button(onClick = onUpload, modifier = Modifier.fillMaxWidth()) { Text("Retry Upload") }
+                Button(onClick = onConfirmAction, modifier = Modifier.fillMaxWidth()) { Text("Retry") }
             }
             else -> {
-                // Split buttons: Preview and Upload
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -301,15 +328,15 @@ fun OcrPreviewScreen(
                         Text("Preview")
                     }
 
-                    // Upload Button
+                    // Confirm Button (Changes based on mode)
                     Button(
-                        onClick = onUpload,
+                        onClick = onConfirmAction,
                         modifier = Modifier.weight(1f),
                         enabled = ocrState is OcrProcessingState.Success || ocrState is OcrProcessingState.Idle
                     ) {
-                        Icon(Icons.Default.CloudUpload, contentDescription = null)
+                        Icon(if (isUploadMode) Icons.Default.CloudUpload else Icons.Default.Check, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Upload")
+                        Text(if (isUploadMode) "Upload" else "Use Scan")
                     }
                 }
             }
@@ -319,7 +346,6 @@ fun OcrPreviewScreen(
 
 @Composable
 fun CameraView(onImageCaptured: (Uri) -> Unit, onError: (ImageCaptureException) -> Unit) {
-    // (Same content as provided in your previous file)
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val preview = remember { Preview.Builder().build() }

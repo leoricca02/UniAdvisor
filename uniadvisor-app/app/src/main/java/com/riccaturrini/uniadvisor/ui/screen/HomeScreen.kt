@@ -244,7 +244,7 @@ fun HomeScreen(
 
                         CalendarCard(onClick = { onNavigate("calendar") })
 
-                        QuickActionsGrid(onNavigate = onNavigate)
+
 
                         // 4. Statistics
                         StatisticsCard(

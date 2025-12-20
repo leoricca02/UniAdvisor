@@ -16,8 +16,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Brightness2
+import androidx.compose.material.icons.filled.BrightnessHigh
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,25 +44,31 @@ class PdfViewerActivity : ComponentActivity() {
         setContent {
             val context = LocalContext.current
 
-            // --- SENSOR INTEGRATION ---
-            // 1. Init the sensor monitor
+            // --- GESTIONE TEMA (Sensore + Manuale) ---
+
+            // 1. Sensore di Luce
             val sensorMonitor = remember { LightSensorMonitor(context) }
-
-            // 2. Get system default preference as initial state
             val systemDark = isSystemInDarkTheme()
-
-            // 3. Collect sensor flow (True = Dark Environment/Mode, False = Light)
+            // Stato proveniente dal sensore (true = ambiente buio)
             val isDarkEnv by sensorMonitor.isDarkEnvironment.collectAsState(initial = systemDark)
 
-            // 4. Apply Theme dynamically
-            UniAdvisorTheme(darkTheme = isDarkEnv) {
+            // 2. Override Manuale
+            // null = usa il sensore (default)
+            // true = forza dark mode
+            // false = forza light mode
+            var manualOverride by remember { mutableStateOf<Boolean?>(null) }
+
+            // 3. Decisione Finale: Se l'utente ha cliccato, usa la sua scelta, altrimenti usa il sensore
+            val isDarkThemeActive = manualOverride ?: isDarkEnv
+
+            UniAdvisorTheme(darkTheme = isDarkThemeActive) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     PdfViewerScreen(
                         pdfUrl = pdfUrl,
-                        isDarkMode = isDarkEnv,
+                        isDarkMode = isDarkThemeActive,
                         onBackPressed = { finish() },
                         onDownload = {
                             try {
@@ -73,6 +80,10 @@ class PdfViewerActivity : ComponentActivity() {
                             } catch (e: Exception) {
                                 Log.e("PdfViewerActivity", "Could not open PDF intent", e)
                             }
+                        },
+                        // Callback per il tasto: inverte lo stato corrente e attiva l'override
+                        onToggleTheme = {
+                            manualOverride = !isDarkThemeActive
                         }
                     )
                 }
@@ -87,7 +98,8 @@ fun PdfViewerScreen(
     pdfUrl: String,
     isDarkMode: Boolean,
     onBackPressed: () -> Unit,
-    onDownload: () -> Unit
+    onDownload: () -> Unit,
+    onToggleTheme: () -> Unit // Funzione passata dalla Activity per gestire il click
 ) {
     var bitmaps by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -95,8 +107,6 @@ fun PdfViewerScreen(
     var totalPages by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-
-    // NOTA: Ho rimosso la logica del ColorFilter che invertiva i colori del PDF.
 
     LaunchedEffect(pdfUrl) {
         scope.launch {
@@ -150,7 +160,6 @@ fun PdfViewerScreen(
                         Text("PDF Preview")
                         if (totalPages > 0) {
                             Text(
-                                // Ho lasciato l'indicatore testuale, utile per debuggare il sensore
                                 text = "$totalPages pages • ${if(isDarkMode) "Dark Mode" else "Light Mode"}",
                                 style = MaterialTheme.typography.bodySmall
                             )
@@ -163,13 +172,17 @@ fun PdfViewerScreen(
                     }
                 },
                 actions = {
-                    // Visual indicator for mode (Sensor Controlled)
-                    Icon(
-                        imageVector = Icons.Default.BrightnessMedium,
-                        contentDescription = "Light Sensor",
-                        tint = if(isDarkMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
+                    // --- TASTO SWITCH TEMA (Ora Cliccabile) ---
+                    IconButton(onClick = onToggleTheme) {
+                        Icon(
+                            // Mostra la Luna se è notte, il Sole se è giorno
+                            imageVector = if (isDarkMode) Icons.Default.Brightness2 else Icons.Default.BrightnessHigh,
+                            contentDescription = "Toggle Theme",
+                            tint = if (isDarkMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    // ------------------------------------------
+
                     IconButton(onClick = onDownload) {
                         Icon(Icons.Default.Download, contentDescription = "Open externally")
                     }
@@ -242,8 +255,7 @@ fun PdfViewerScreen(
                                     bitmap = bitmap.asImageBitmap(),
                                     contentDescription = "Page ${index + 1}",
                                     modifier = Modifier.fillMaxWidth()
-                                    // RIMOSSO: colorFilter = colorFilter
-                                    // L'immagine rimane originale indipendentemente dal tema
+                                    // Nessun ColorFilter: il PDF rimane originale (sfondo bianco)
                                 )
                             }
                         }

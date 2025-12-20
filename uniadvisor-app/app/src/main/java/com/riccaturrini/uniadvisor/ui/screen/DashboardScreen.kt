@@ -18,11 +18,12 @@ import com.riccaturrini.uniadvisor.viewmodel.ProfileViewModel
 @Composable
 fun DashboardScreen(
     authViewModel: AuthViewModel = viewModel(),
-    onNavigate: (String) -> Unit, // Callback per navigazione "esterna" (es. Calendar nel MainNavHost)
+    onNavigate: (String) -> Unit, // Callback per navigazione "esterna" (es. Calendar o Camera nel MainNavHost)
     onLogout: () -> Unit = {}
 ) {
     val profileViewModel: ProfileViewModel = viewModel()
-    val navController = rememberNavController() // NavController interno per la BottomBar
+    // Questo è il controller interno per la BottomBar (Home, Notes, Profile, etc.)
+    val navController = rememberNavController()
     val courseViewModel: CourseViewModel = viewModel()
 
     // Ensure user data is loaded
@@ -53,7 +54,7 @@ fun DashboardScreen(
             navController = navController,
             authViewModel = authViewModel,
             courseViewModel = courseViewModel,
-            onParentNavigate = onNavigate, // <--- Passiamo il navigatore "padre" al grafo
+            onParentNavigate = onNavigate,
             onLogout = onLogout,
             modifier = Modifier.padding(innerPadding)
         )
@@ -67,7 +68,7 @@ fun DashboardNavGraph(
     navController: NavHostController,
     authViewModel: AuthViewModel,
     courseViewModel: CourseViewModel,
-    onParentNavigate: (String) -> Unit, // <--- Nuovo parametro
+    onParentNavigate: (String) -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -109,7 +110,11 @@ fun DashboardNavGraph(
             ReviewsScreen(authViewModel = authViewModel)
         }
         composable("notes") {
-            NotesScreen(authViewModel = authViewModel)
+            // --- FIX QUI: Passiamo il navController ---
+            NotesScreen(
+                navController = navController, // Necessario per la fotocamera
+                authViewModel = authViewModel
+            )
         }
         composable("profile") {
             ProfileScreen(
@@ -120,10 +125,32 @@ fun DashboardNavGraph(
                 onAccountDeleted = onLogout
             )
         }
+
+        // NOTA IMPORTANTE:
+        // Se "camera_ocr" non è definito qui dentro (nel grafo interno),
+        // l'app crasherà quando proverai ad aprire la fotocamera da NotesScreen.
+        // Se "camera_ocr" è nel MainNavHost (padre), NotesScreen non riuscirà a trovarlo
+        // usando 'navController' (che è quello figlio).
+        //
+        // Soluzione rapida: Aggiungi la rotta camera anche qui se serve,
+        // oppure assicurati che NotesScreen usi il root controller se la camera è fuori.
+        composable("camera_ocr") {
+            com.riccaturrini.uniadvisor.ui.screen.CameraOcrScreen(
+                courseId = null, // Opzionale
+                onNavigateBack = { navController.popBackStack() },
+                onResult = { uri ->
+                    // Restituisci il risultato a NotesScreen o CourseDetailScreen
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("scanned_pdf_uri", uri.toString())
+                    navController.popBackStack()
+                }
+            )
+        }
     }
 }
 
-// 🔹 Helper to know which section is active
+// Helper to know which section is active
 @Composable
 private fun currentDestination(navController: NavHostController): String {
     val currentDestination = navController.currentBackStackEntryAsState().value?.destination?.route
