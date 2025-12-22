@@ -48,7 +48,9 @@ fun DashboardScreen(
                 }
             )
         }
+        // Note: We REMOVED topBar here to allow each screen to have its own.
     ) { innerPadding ->
+
         DashboardNavGraph(
             profileViewModel = profileViewModel,
             navController = navController,
@@ -56,7 +58,10 @@ fun DashboardScreen(
             courseViewModel = courseViewModel,
             onParentNavigate = onNavigate,
             onLogout = onLogout,
-            modifier = Modifier.padding(innerPadding)
+            // We apply only the BOTTOM padding from the Scaffold.
+            // We explicitly do NOT apply top padding here, because we want the child screens (Home, Faculty, etc.)
+            // to draw behind the status bar so their individual TopBars look correct.
+            modifier = Modifier.padding(bottom = innerPadding.calculateBottomPadding())
         )
     }
 }

@@ -45,6 +45,7 @@ import com.riccaturrini.uniadvisor.data.Lesson
 import com.riccaturrini.uniadvisor.network.ApiClient
 import com.riccaturrini.uniadvisor.network.CheckInRequest
 import com.riccaturrini.uniadvisor.ui.components.CompassDialog
+import com.riccaturrini.uniadvisor.ui.components.UniAdvisorTopBar
 import com.riccaturrini.uniadvisor.viewmodel.AuthViewModel
 import com.riccaturrini.uniadvisor.viewmodel.ProfileUiState
 import com.riccaturrini.uniadvisor.viewmodel.ProfileViewModel
@@ -88,9 +89,6 @@ fun HomeScreen(
     val profileState by profileViewModel.profileState.collectAsState()
     val scheduleState by scheduleViewModel.uiState.collectAsState()
 
-    // UI States
-    var showLogoutDialog by remember { mutableStateOf(false) }
-
     // --- COMPASS NAVIGATION STATES ---
     var showCompassDialog by rememberSaveable { mutableStateOf(false) }
     var navigationTarget by remember { mutableStateOf<NavigationTarget?>(null) }
@@ -128,34 +126,13 @@ fun HomeScreen(
         )
     }
 
-    // --- LOGOUT DIALOG ---
-    if (showLogoutDialog) {
-        LogoutDialog(
-            onDismiss = { showLogoutDialog = false },
-            onConfirm = {
-                showLogoutDialog = false
-                onLogout()
-            }
-        )
-    }
-
+    // --- MAIN UI STRUCTURE ---
+    // We used Scaffold again here to host the TopBar locally.
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("UniAdvisor") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ),
-                actions = {
-                    IconButton(onClick = { showLogoutDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.ExitToApp,
-                            contentDescription = "Logout",
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-                }
+            UniAdvisorTopBar(
+                title = "UniAdvisor",
+                onLogoutClick = onLogout
             )
         }
     ) { paddingValues ->
@@ -1034,27 +1011,7 @@ fun QuickActionCard(
     }
 }
 
-@Composable
-fun LogoutDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Logout") },
-        text = { Text("Are you sure you want to log out?") },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) {
-                Text("Logout")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
-}
+// REMOVED: LogoutDialog (it is now inside TopBar.kt)
 
 // Helper for dynamic greeting based on time of day
 fun getGreeting(): String {
