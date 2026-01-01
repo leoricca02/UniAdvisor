@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.storage.FirebaseStorage
+import com.google.mlkit.vision.text.Text
 import com.riccaturrini.uniadvisor.data.*
 import com.riccaturrini.uniadvisor.utils.OcrUtils
 import kotlinx.coroutines.Dispatchers
@@ -53,13 +54,16 @@ class CameraOcrViewModel : ViewModel() {
             try {
                 val updatedImages = mutableListOf<CapturedImage>()
                 for (image in _capturedImages.value) {
-                    val extractedText = withContext(Dispatchers.IO) {
+                    // MODIFICA: extractTextFromImage ora ritorna 'Text' (non String)
+                    val extractedTextResult: Text = withContext(Dispatchers.IO) {
                         OcrUtils.extractTextFromImage(context, image.uri)
                     }
-                    updatedImages.add(image.copy(extractedText = extractedText))
+                    updatedImages.add(image.copy(extractedText = extractedTextResult))
                 }
                 _capturedImages.value = updatedImages
-                val allText = updatedImages.joinToString("\n\n") { it.extractedText ?: "" }
+
+                // MODIFICA: Per mostrare il testo nella UI usiamo .text dell'oggetto Text
+                val allText = updatedImages.joinToString("\n\n") { it.extractedText?.text ?: "" }
                 _ocrState.value = OcrProcessingState.Success(allText)
             } catch (e: Exception) {
                 _ocrState.value = OcrProcessingState.Error(e.message ?: "OCR processing failed")
@@ -75,7 +79,8 @@ class CameraOcrViewModel : ViewModel() {
             try {
                 _pdfState.value = PdfGenerationState.Processing(0)
                 val imageUris = _capturedImages.value.map { it.uri }
-                val extractedTexts = _capturedImages.value.map { it.extractedText ?: "" }
+                // MODIFICA: Passiamo la lista di oggetti Text?
+                val extractedTexts = _capturedImages.value.map { it.extractedText }
 
                 val pdfFile = OcrUtils.generateSearchablePdf(
                     context = context,
@@ -96,7 +101,8 @@ class CameraOcrViewModel : ViewModel() {
     private fun generatePdfInternal(context: Context): File? {
         return try {
             val imageUris = _capturedImages.value.map { it.uri }
-            val extractedTexts = _capturedImages.value.map { it.extractedText ?: "" }
+            // MODIFICA: Passiamo la lista di oggetti Text?
+            val extractedTexts = _capturedImages.value.map { it.extractedText }
             OcrUtils.generateSearchablePdf(context, imageUris, extractedTexts)
         } catch (e: Exception) {
             null

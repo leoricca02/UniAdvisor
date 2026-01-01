@@ -3,7 +3,7 @@ package com.riccaturrini.uniadvisor.data
 
 import com.google.gson.annotations.SerializedName
 import android.net.Uri
-
+import com.google.mlkit.vision.text.Text // NECESSARIO per l'oggetto Text
 
 // Corrisponde a schemas/user.py -> UserProfileCreate
 data class UserProfileCreate(
@@ -134,7 +134,7 @@ data class NoteCreate(
  */
 data class CapturedImage(
     val uri: Uri,
-    val extractedText: String? = null,
+    val extractedText: Text? = null, // MODIFICATO: String? -> Text?
     val timestamp: Long = System.currentTimeMillis()
 )
 

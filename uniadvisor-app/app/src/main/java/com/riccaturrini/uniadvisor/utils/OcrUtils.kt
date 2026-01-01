@@ -8,65 +8,52 @@ import android.media.ExifInterface
 import android.net.Uri
 import android.util.Log
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import com.itextpdf.io.font.constants.StandardFonts
 import com.itextpdf.io.image.ImageDataFactory
+import com.itextpdf.kernel.font.PdfFontFactory
+import com.itextpdf.kernel.geom.PageSize
 import com.itextpdf.kernel.pdf.PdfDocument
 import com.itextpdf.kernel.pdf.PdfWriter
+import com.itextpdf.kernel.pdf.canvas.PdfCanvas
+import com.itextpdf.kernel.pdf.canvas.PdfCanvasConstants
 import com.itextpdf.layout.Document
 import com.itextpdf.layout.element.Image
-import com.itextpdf.layout.element.Paragraph
 import kotlinx.coroutines.tasks.await
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 
-/**
- * Utility class for OCR (Optical Character Recognition) operations
- */
 object OcrUtils {
 
     private val textRecognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
-    /**
-     * Extract text from an image using ML Kit
-     */
-    suspend fun extractTextFromImage(context: Context, imageUri: Uri): String {
+    suspend fun extractTextFromImage(context: Context, imageUri: Uri): Text {
         return try {
             val inputImage = InputImage.fromFilePath(context, imageUri)
-            val result = textRecognizer.process(inputImage).await()
-
-            val extractedText = result.text
-            Log.d("OcrUtils", "✅ Text extracted: ${extractedText.length} characters")
-
-            extractedText
+            textRecognizer.process(inputImage).await()
         } catch (e: Exception) {
             Log.e("OcrUtils", "❌ Error extracting text", e)
             throw OcrException("Failed to extract text: ${e.message}")
         }
     }
 
-    /**
-     * Extract text from a bitmap
-     */
-    suspend fun extractTextFromBitmap(bitmap: Bitmap): String {
+    suspend fun extractTextFromBitmap(bitmap: Bitmap): Text {
         return try {
             val inputImage = InputImage.fromBitmap(bitmap, 0)
-            val result = textRecognizer.process(inputImage).await()
-            result.text
+            textRecognizer.process(inputImage).await()
         } catch (e: Exception) {
             Log.e("OcrUtils", "❌ Error extracting text from bitmap", e)
             throw OcrException("Failed to extract text: ${e.message}")
         }
     }
 
-    /**
-     * Generate a searchable PDF from images and extracted text
-     */
     fun generateSearchablePdf(
         context: Context,
         images: List<Uri>,
-        extractedTexts: List<String>,
+        extractedTexts: List<Text?>,
         outputFileName: String = "scanned_note_${System.currentTimeMillis()}.pdf"
     ): File {
         try {
@@ -74,62 +61,83 @@ object OcrUtils {
             val pdfWriter = PdfWriter(FileOutputStream(outputFile))
             val pdfDocument = PdfDocument(pdfWriter)
             val document = Document(pdfDocument)
+            document.setMargins(0f, 0f, 0f, 0f)
+
+            val font = PdfFontFactory.createFont(StandardFonts.HELVETICA)
 
             images.forEachIndexed { index, imageUri ->
-                // ✅ Load bitmap with correct rotation
                 val bitmap = loadBitmapFromUri(context, imageUri)
+                val pageWidth = bitmap.width.toFloat()
+                val pageHeight = bitmap.height.toFloat()
+                val pageSize = PageSize(pageWidth, pageHeight)
 
+                // 1. Crea Pagina
+                val page = pdfDocument.addNewPage(pageSize)
+
+                // 2. Prepara l'immagine
                 val byteArrayOutputStream = ByteArrayOutputStream()
                 bitmap.compress(Bitmap.CompressFormat.JPEG, 80, byteArrayOutputStream)
                 val imageData = ImageDataFactory.create(byteArrayOutputStream.toByteArray())
-                val pdfImage = Image(imageData)
 
-                // Scale image to fit page
-                pdfImage.setAutoScale(true)
-                document.add(pdfImage)
+                // CORREZIONE: Usiamo l'oggetto Image (Layout API) invece di canvas.addImage
+                // Questo risolve l'errore "Unresolved reference"
+                val img = Image(imageData)
+                img.setFixedPosition(index + 1, 0f, 0f) // Pagina corrente (index+1)
+                img.scaleAbsolute(pageWidth, pageHeight) // Scala per riempire la pagina
+                document.add(img)
 
-                // Add extracted text (invisible layer for searchability)
-                if (index < extractedTexts.size && extractedTexts[index].isNotBlank()) {
-                    val textParagraph = Paragraph(extractedTexts[index])
-                        .setFontSize(1f) // Very small font
-                        .setOpacity(0.01f) // Nearly invisible
-                    document.add(textParagraph)
-                }
+                // 3. Sovrapponi il Testo Invisibile (usando PdfCanvas per precisione)
+                val mlText = extractedTexts.getOrNull(index)
+                if (mlText != null) {
+                    val canvas = PdfCanvas(page)
+                    canvas.beginText()
+                    canvas.setTextRenderingMode(PdfCanvasConstants.TextRenderingMode.INVISIBLE)
 
-                // Add page break if not last image
-                if (index < images.size - 1) {
-                    document.add(com.itextpdf.layout.element.AreaBreak())
+                    for (block in mlText.textBlocks) {
+                        for (line in block.lines) {
+                            val box = line.boundingBox
+                            if (box != null) {
+                                // Coordinate
+                                val pdfX = box.left.toFloat()
+                                val pdfY = pageHeight - box.bottom.toFloat()
+                                val pdfW = box.width().toFloat()
+                                val pdfH = box.height().toFloat()
+
+                                val textWidth = font.getWidth(line.text, pdfH)
+                                val hScale = if (textWidth > 0) pdfW / textWidth else 1f
+
+                                // Posiziona e "stira" il testo invisibile
+                                canvas.setTextMatrix(hScale, 0f, 0f, 1f, pdfX, pdfY)
+
+                                canvas.setFontAndSize(font, pdfH)
+                                canvas.showText(line.text)
+                            }
+                        }
+                    }
+                    canvas.endText()
                 }
             }
 
             document.close()
-            Log.d("OcrUtils", "✅ PDF generated: ${outputFile.absolutePath}")
-
+            Log.d("OcrUtils", "✅ Searchable PDF generated: ${outputFile.absolutePath}")
             return outputFile
+
         } catch (e: Exception) {
             Log.e("OcrUtils", "❌ Error generating PDF", e)
             throw PdfGenerationException("Failed to generate PDF: ${e.message}")
         }
     }
 
-    /**
-     * Load bitmap from URI and rotate it based on Exif data
-     */
     private fun loadBitmapFromUri(context: Context, uri: Uri): Bitmap {
         val inputStream = context.contentResolver.openInputStream(uri)
             ?: throw IllegalArgumentException("Cannot load bitmap from URI: $uri")
 
         val bitmap = BitmapFactory.decodeStream(inputStream)
         inputStream.close()
-
         if (bitmap == null) throw IllegalArgumentException("Failed to decode bitmap from: $uri")
-
         return rotateBitmapIfRequired(context, bitmap, uri)
     }
 
-    /**
-     * Reads Exif orientation and rotates the bitmap if necessary
-     */
     private fun rotateBitmapIfRequired(context: Context, bitmap: Bitmap, uri: Uri): Bitmap {
         try {
             val input = context.contentResolver.openInputStream(uri) ?: return bitmap
@@ -155,16 +163,10 @@ object OcrUtils {
         return Bitmap.createBitmap(source, 0, 0, source.width, source.height, matrix, true)
     }
 
-    /**
-     * Cleanup resources
-     */
     fun cleanup() {
         textRecognizer.close()
     }
 }
 
-/**
- * Custom exceptions
- */
 class OcrException(message: String) : Exception(message)
 class PdfGenerationException(message: String) : Exception(message)
