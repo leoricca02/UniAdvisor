@@ -4,7 +4,7 @@ import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast // Added for debug message
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.*
@@ -39,9 +39,6 @@ class MainActivity : ComponentActivity() {
                 if (isLyingFlat) {
                     // Lock to Portrait
                     activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-
-                    // DEBUG: Show a Toast when bed mode activates
-                    //Toast.makeText(context, "Bed Mode Active: Rotation Locked 🛏️", Toast.LENGTH_SHORT).show()
                     Log.d("SENSOR", "Bed Mode Detected: Locking to Portrait")
                 } else {
                     // Unlock rotation
@@ -128,7 +125,15 @@ fun UniAdvisorApp() {
             Log.d("DEBUG_NAV", "🎨 Rendering Screen: COMPLETE_PROFILE")
             CompleteProfileScreen(
                 authViewModel = authViewModel,
-                onProfileCreationSuccess = { Log.d("DEBUG_NAV", "⚡ Profile Creation callback (gestito da Global Listener)") },
+                // --- FIX PRINCIPALE: Navigazione esplicita verso la scelta facoltà ---
+                onProfileCreationSuccess = {
+                    Log.d("DEBUG_NAV", "✅ Profile Created! Navigating to SELECT_FACULTY")
+                    navController.navigate("select_faculty") {
+                        // Rimuoviamo le schermate di auth dallo stack
+                        popUpTo("login") { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
                 onLogout = {
                     navController.navigate("login") { popUpTo("splash") { inclusive = true } }
                 }

@@ -55,13 +55,19 @@ interface ApiService {
     suspend fun getCourseReviews(@Path("course_id") courseId: Int): retrofit2.Response<List<Review>>
 
     @POST("courses/{course_id}/reviews")
-    suspend fun addReview(@Path("course_id") courseId: Int, @Body review: ReviewCreate): retrofit2.Response<Review>
+    suspend fun addReview(
+        @Path("course_id") courseId: Int,
+        @Body review: ReviewCreate
+    ): retrofit2.Response<Review>
 
     @GET("courses/my-reviews")
     suspend fun getMyReviews(): retrofit2.Response<List<Review>>
 
     @PUT("courses/reviews/{review_id}")
-    suspend fun updateReview(@Path("review_id") reviewId: Int, @Body review: ReviewCreate): retrofit2.Response<Review>
+    suspend fun updateReview(
+        @Path("review_id") reviewId: Int,
+        @Body review: ReviewCreate
+    ): retrofit2.Response<Review>
 
     @DELETE("courses/reviews/{review_id}")
     suspend fun deleteReview(@Path("review_id") reviewId: Int): retrofit2.Response<Unit>
@@ -106,7 +112,6 @@ interface ApiService {
 
     @GET("notes/notes/{note_id}/reviews")
     suspend fun getNoteReviews(@Path("note_id") noteId: Int): retrofit2.Response<List<NoteRating>>
-
 
 
     // ============================================
@@ -156,7 +161,7 @@ interface ApiService {
     suspend fun checkInLesson(
         @Path("lesson_id") lessonId: Int,
         @Body location: CheckInRequest
-    ): Response<Map<String, Any>>
+    ): Response<CheckInResponse>
 }
 
 /**
