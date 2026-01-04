@@ -43,7 +43,7 @@ It provides course reviews, shared study notes, OCR-based document scanning, and
 
 ## 👨‍💻 Authors
 
-- **leoricca02**
-- **turroo**
+- **leoricca02 - Leonardo Ricca**
+- **turroo - Federico Turrini**
 
 Developed for the **Mobile Applications and Cloud Computing** course.
