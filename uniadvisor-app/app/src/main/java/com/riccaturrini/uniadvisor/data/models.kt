@@ -121,6 +121,11 @@ data class NoteRatingUpdate(
     val comment: String?
 )
 
+data class CheckInResponse(
+    val message: String,
+    val new_occupancy: Int
+)
+
 // For creating a note
 data class NoteCreate(
     val course_id: Int,

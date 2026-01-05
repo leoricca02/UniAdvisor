@@ -41,6 +41,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.riccaturrini.uniadvisor.data.CheckInResponse
 import com.riccaturrini.uniadvisor.data.Lesson
 import com.riccaturrini.uniadvisor.network.ApiClient
 import com.riccaturrini.uniadvisor.network.CheckInRequest
@@ -127,7 +128,6 @@ fun HomeScreen(
     }
 
     // --- MAIN UI STRUCTURE ---
-    // We used Scaffold again here to host the TopBar locally.
     Scaffold(
         topBar = {
             UniAdvisorTopBar(
@@ -220,8 +220,6 @@ fun HomeScreen(
                         )
 
                         CalendarCard(onClick = { onNavigate("calendar") })
-
-
 
                         // 4. Statistics
                         StatisticsCard(
@@ -351,7 +349,6 @@ fun TodayLessonCard(
     val lifecycleOwner = LocalLifecycleOwner.current
 
     // --- 1. GESTIONE TEMPO REALE (Auto-aggiornamento) ---
-    // Usiamo uno stato per 'now' che si aggiorna ogni minuto.
     var now by remember { mutableStateOf(LocalTime.now()) }
 
     LaunchedEffect(Unit) {
@@ -371,6 +368,7 @@ fun TodayLessonCard(
     val todayDate = LocalDate.now().toString()
     val serverDate = lesson.last_checkin_date
 
+    // Se la data non è oggi, resettiamo visivamente a 0 finché non ricarichiamo dal server
     val initialOccupancy = if (serverDate == todayDate) {
         lesson.checkins
     } else {
@@ -404,7 +402,7 @@ fun TodayLessonCard(
         }
     }
 
-    // Permission Launcher
+    // Permission Launchers
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -416,7 +414,6 @@ fun TodayLessonCard(
         }
     }
 
-    // Navigation Permission Launcher
     val navPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -442,11 +439,16 @@ fun TodayLessonCard(
                     isCheckingIn = true
                     checkInFailed = false // Reset preventivo
 
-                    performCheckIn(context, lesson.id, scope) { success ->
+                    // --- CHIAMATA CHECK-IN ---
+                    performCheckIn(context, lesson.id, scope) { success, newCount ->
                         isCheckingIn = false
                         if (success) {
                             isCheckedIn = true
-                            currentOccupancy += 1
+                            if (newCount != null) {
+                                currentOccupancy = newCount
+                            } else {
+                                currentOccupancy += 1
+                            }
                             saveLocalCheckIn(context, lesson.id)
                         } else {
                             checkInFailed = true
@@ -459,7 +461,7 @@ fun TodayLessonCard(
         }
     }
 
-    // Styling dinamico
+    // Styling
     val containerColor = if (isActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
     val contentColor = if (isActive) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
     val borderColor = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
@@ -478,7 +480,7 @@ fun TodayLessonCard(
                 .fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Header: Orario
+            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -508,7 +510,7 @@ fun TodayLessonCard(
                 color = contentColor
             )
 
-            // Occupancy Counter
+            // Occupancy
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -532,7 +534,7 @@ fun TodayLessonCard(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Footer: Status & Navigate
+            // Footer
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -544,30 +546,27 @@ fun TodayLessonCard(
                     contentAlignment = Alignment.CenterStart
                 ) {
                     if (isCheckedIn) {
-                        // --- MODIFICA 1: Concluded vs Present ---
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = if (isActive) "Present" else "Concluded", // Se finita, cambia testo
+                                text = if (isActive) "Present" else "Concluded",
                                 color = Color(0xFF4CAF50),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp
                             )
                         }
                     } else if (isCheckingIn) {
-                        // Loading
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(modifier = Modifier.size(12.dp), strokeWidth = 2.dp)
                             Spacer(modifier = Modifier.width(6.dp))
                             Text("Checking...", style = MaterialTheme.typography.bodySmall)
                         }
                     } else if (checkInFailed && isActive) {
-                        // --- MODIFICA 2: Fix Retry e Testo ---
                         Row(
                             modifier = Modifier.clickable {
-                                checkInFailed = false // RESET STATO
-                                checkTrigger++        // RIPROVA
+                                checkInFailed = false
+                                checkTrigger++
                             },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -576,7 +575,6 @@ fun TodayLessonCard(
                             Text("Not present. Retry", color = MaterialTheme.colorScheme.error, fontSize = 12.sp, fontStyle = FontStyle.Italic)
                         }
                     } else if (locationPermissionDenied && isActive) {
-                        // Permission Missing
                         Button(
                             onClick = { locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
@@ -585,24 +583,15 @@ fun TodayLessonCard(
                             Text("Enable GPS", fontSize = 11.sp)
                         }
                     } else {
-                        // Inactive (Soon o Finished)
                         Text(if (now.isBefore(start)) "Soon" else "Finished", color = Color.Gray, fontSize = 12.sp)
                     }
                 }
 
-                // NAVIGATE BUTTON
                 if (lesson.course.latitude != null && lesson.course.longitude != null) {
                     FilledTonalIconButton(
                         onClick = {
                             if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                                onNavigateClick(
-                                    lesson.course.latitude,
-                                    lesson.course.longitude,
-                                    lesson.course.name,
-                                    lesson.course.roomNumber,
-                                    lesson.course.floor,
-                                    lesson.course.buildingName
-                                )
+                                onNavigateClick(lesson.course.latitude, lesson.course.longitude, lesson.course.name, lesson.course.roomNumber, lesson.course.floor, lesson.course.buildingName)
                             } else {
                                 navPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                             }
@@ -625,16 +614,13 @@ fun TodayLessonCard(
 // HELPERS (Persistence & Location)
 // ==========================================
 
-// Saves that this specific lesson has been checked in for today
 fun saveLocalCheckIn(context: Context, lessonId: Int) {
     val prefs = context.getSharedPreferences("uniadvisor_prefs", Context.MODE_PRIVATE)
     val today = LocalDate.now().toString()
-    // Key format: checkin_LESSONID_DATE
     val key = "checkin_${lessonId}_$today"
     prefs.edit().putBoolean(key, true).apply()
 }
 
-// Checks if we already have a local record for today
 fun isLocalCheckedIn(context: Context, lessonId: Int): Boolean {
     val prefs = context.getSharedPreferences("uniadvisor_prefs", Context.MODE_PRIVATE)
     val today = LocalDate.now().toString()
@@ -642,7 +628,6 @@ fun isLocalCheckedIn(context: Context, lessonId: Int): Boolean {
     return prefs.getBoolean(key, false)
 }
 
-// Helper to get location for Compass initialization
 suspend fun getCurrentLocation(context: Context): Location? = withContext(Dispatchers.IO) {
     try {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) return@withContext null
@@ -652,42 +637,47 @@ suspend fun getCurrentLocation(context: Context): Location? = withContext(Dispat
     } catch (e: Exception) { null }
 }
 
-// Silent Check-in
-fun performCheckIn(context: Context, lessonId: Int, scope: CoroutineScope, onResult: (Boolean) -> Unit) {
-    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
-    try {
-        fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
-            if (location != null) {
-                scope.launch(Dispatchers.IO) {
-                    try {
-                        val request = CheckInRequest(location.latitude, location.longitude)
-                        val response = ApiClient.instance.checkInLesson(lessonId, request)
+// --- MODIFIED PERFORM CHECK IN (FIXED LOCATION LOGIC) ---
+fun performCheckIn(
+    context: Context,
+    lessonId: Int,
+    scope: CoroutineScope,
+    onResult: (Boolean, Int?) -> Unit
+) {
+    // ⚠️ FIX: Usiamo getCurrentLocation (Attivo) invece di lastLocation (Passivo/Cache)
+    // Questo sveglia il GPS anche se non hai aperto Maps prima.
 
-                        withContext(Dispatchers.Main) {
-                            if (response.isSuccessful) {
-                                onResult(true)
-                            } else {
-                                onResult(false)
-                            }
-                        }
-                    } catch (e: Exception) {
-                        withContext(Dispatchers.Main) {
-                            onResult(false)
-                        }
+    scope.launch(Dispatchers.IO) {
+        // 1. Ottieni posizione fresca (High Accuracy)
+        val location = getCurrentLocation(context)
+
+        if (location != null) {
+            // 2. Se abbiamo la posizione, chiama il server
+            try {
+                val request = CheckInRequest(location.latitude, location.longitude)
+                val response = ApiClient.instance.checkInLesson(lessonId, request)
+
+                withContext(Dispatchers.Main) {
+                    if (response.isSuccessful) {
+                        val body = response.body()
+                        val checkInResponse = body as? CheckInResponse
+                        val newCount = checkInResponse?.new_occupancy
+                        onResult(true, newCount)
+                    } else {
+                        onResult(false, null)
                     }
                 }
-            } else {
-                onResult(false)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) { onResult(false, null) }
             }
-        }.addOnFailureListener {
-            onResult(false)
+        } else {
+            // Posizione nulla (GPS spento, timeout, o nessun satellite)
+            withContext(Dispatchers.Main) { onResult(false, null) }
         }
-    } catch (e: SecurityException) {
-        onResult(false)
     }
 }
 
-// Helper to open Google Maps directly (Fallback)
 fun openMap(context: Context, lat: Double, lng: Double, label: String) {
     val uri = Uri.parse("geo:$lat,$lng?q=$lat,$lng($label)")
     val intent = Intent(Intent.ACTION_VIEW, uri).setPackage("com.google.android.apps.maps")
@@ -1011,9 +1001,6 @@ fun QuickActionCard(
     }
 }
 
-// REMOVED: LogoutDialog (it is now inside TopBar.kt)
-
-// Helper for dynamic greeting based on time of day
 fun getGreeting(): String {
     val hour = LocalTime.now().hour
     return when (hour) {
