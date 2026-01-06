@@ -172,10 +172,10 @@ object ApiClient {
     // URL of backend - use 10.0.2.2 for local testing
     //private const val BASE_URL = "https://uniadvisor-backend-5mop.onrender.com/"
     //private const val BASE_URL = "http://10.0.2.2:8000"
-    //private const val BASE_URL = "http://192.168.178.102:8000/"
+    private const val BASE_URL = "http://192.168.178.102:8000/"
 
     // hotspot
-    private const val BASE_URL = "http://10.71.80.195:8000/"
+    //private const val BASE_URL = "http://192.168.0.49:8000/"
 
     // configuration for the client to connect to the server
     private val okHttpClient = OkHttpClient.Builder()
